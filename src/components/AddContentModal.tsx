@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Folder, Sparkles, Check, DownloadCloud, AlertCircle } from 'lucide-react';
+import { X, DownloadCloud } from 'lucide-react';
 import type { SearchResultItem, QualityProfile, RootFolder } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 
@@ -105,57 +105,62 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
     }
   };
 
+  const serviceBadgeClass = 
+    item.service === 'sonarr' ? 'bg-[#a8c7fa] text-[#041e49]' :
+    item.service === 'radarr' ? 'bg-[#e0d0b8] text-[#3e2723]' :
+    'bg-[#b4e3be] text-[#072711]';
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-[#14171f] border border-white/[0.09] rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl">
         {/* Header with image preview */}
-        <div className="relative p-5 border-b border-slate-800 flex items-start gap-4">
-          <div className="w-16 h-24 rounded-lg bg-slate-950 overflow-hidden shrink-0 border border-slate-800">
+        <div className="relative p-6 border-b border-white/[0.07] flex items-start gap-4">
+          <div className="w-16 h-24 rounded-2xl bg-[#0c0e12] overflow-hidden shrink-0 border border-white/[0.08]">
             {item.posterUrl ? (
               <img src={item.posterUrl} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">No image</div>
+              <div className="w-full h-full flex items-center justify-center text-[#5f6368] text-xs">No image</div>
             )}
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm ${serviceBadgeClass}`}>
                 {item.service}
               </span>
-              <span className="text-xs text-slate-400">{item.year}</span>
+              <span className="text-xs text-[#9aa0a6] font-mono">{item.year}</span>
             </div>
-            <h3 className="text-base font-bold text-white truncate">{item.title}</h3>
+            <h3 className="text-base font-extrabold text-white truncate font-sans tracking-tight">{item.title}</h3>
             {item.authorOrArtist && (
-              <p className="text-xs text-slate-400 truncate mt-0.5">{item.authorOrArtist}</p>
+              <p className="text-xs text-[#9aa0a6] truncate mt-0.5">{item.authorOrArtist}</p>
             )}
-            <p className="text-xs text-slate-500 line-clamp-2 mt-1">{item.overview || 'No synopsis available.'}</p>
+            <p className="text-xs text-[#9aa0a6] line-clamp-2 mt-1.5 leading-relaxed">{item.overview || 'No synopsis available.'}</p>
           </div>
 
           <button
             id="modal-close-btn"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="text-[#9aa0a6] hover:text-white p-1.5 rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Quality Profile */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5">
               Quality / Metadata Profile
             </label>
             <select
               id="add-quality-profile-select"
               value={selectedProfileId}
               onChange={(e) => setSelectedProfileId(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-slate-950/70 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
+              className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white focus:outline-none focus:border-white/30 cursor-pointer font-medium"
             >
               {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={p.id} className="bg-[#14171f] text-white">
                   {p.name}
                 </option>
               ))}
@@ -164,18 +169,18 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
 
           {/* Root Folder Path */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-              <span>Root Storage Path (TrueNAS Host)</span>
+            <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <span>Root Storage Path (Host)</span>
             </label>
             {rootFolders.length > 0 ? (
               <select
                 id="add-root-folder-select"
                 value={selectedRootPath}
                 onChange={(e) => setSelectedRootPath(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950/70 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
+                className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white focus:outline-none focus:border-white/30 cursor-pointer font-mono"
               >
                 {rootFolders.map((rf) => (
-                  <option key={rf.id} value={rf.path}>
+                  <option key={rf.id} value={rf.path} className="bg-[#14171f] text-white">
                     {rf.path} {rf.freeSpaceBytes ? `(Free: ${(rf.freeSpaceBytes / 1e12).toFixed(1)} TB)` : ''}
                   </option>
                 ))}
@@ -187,24 +192,24 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
                 value={selectedRootPath}
                 onChange={(e) => setSelectedRootPath(e.target.value)}
                 placeholder="/data/media/..."
-                className="w-full px-3 py-2 bg-slate-950/70 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
+                className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white focus:outline-none focus:border-white/30 font-mono"
               />
             )}
           </div>
 
           {/* Toggles */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
+          <div className="space-y-3 pt-3 border-t border-white/[0.06]">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 id="toggle-search-missing"
                 type="checkbox"
                 checked={searchForMissing}
                 onChange={(e) => setSearchForMissing(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-700 text-cyan-600 focus:ring-cyan-500 bg-slate-950"
+                className="w-4 h-4 rounded border-white/20 bg-[#0c0e12] text-white"
               />
               <div className="text-xs">
-                <span className="font-semibold text-white block">Start search for missing items immediately</span>
-                <span className="text-slate-400">Prowlarr indexers will immediately query download releases</span>
+                <span className="font-bold text-white block">Search for release immediately</span>
+                <span className="text-[#9aa0a6] text-[11px]">Indexers will immediately query releases and dispatch grab</span>
               </div>
             </label>
 
@@ -214,21 +219,21 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
                 type="checkbox"
                 checked={monitorAll}
                 onChange={(e) => setMonitorAll(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-700 text-cyan-600 focus:ring-cyan-500 bg-slate-950"
+                className="w-4 h-4 rounded border-white/20 bg-[#0c0e12] text-white"
               />
               <div className="text-xs">
-                <span className="font-semibold text-white block">Monitor new/all seasons/albums/books</span>
-                <span className="text-slate-400">Keep media monitored for future updates and quality upgrades</span>
+                <span className="font-bold text-white block">Monitor all seasons / tracks</span>
+                <span className="text-[#9aa0a6] text-[11px]">Keep media monitored for future updates and upgrades</span>
               </div>
             </label>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-bold text-[#9aa0a6] hover:text-white rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
             >
               Cancel
             </button>
@@ -236,14 +241,14 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
               id="add-modal-submit-btn"
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-900/30 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full shadow transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer pixel-pill"
             >
               {submitting ? (
                 <span>Adding & Grabbing...</span>
               ) : (
                 <>
                   <DownloadCloud className="w-3.5 h-3.5" />
-                  <span>Add & Start Monitoring</span>
+                  <span>Add to Stack</span>
                 </>
               )}
             </button>

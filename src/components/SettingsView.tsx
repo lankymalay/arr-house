@@ -1,57 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Server, 
-  KeyRound, 
-  Users, 
-  Save, 
   RotateCw, 
+  Save, 
   CheckCircle2, 
   AlertCircle, 
-  ExternalLink,
-  Shield,
-  Trash2,
-  Download,
-  FolderTree
+  FolderTree, 
+  Users, 
+  Trash2, 
+  Download
 } from 'lucide-react';
-import type { ServiceId, ServiceConfig, User, UserRole, QualityProfile, RootFolder } from '../types.js';
-import { useAuth } from '../context/AuthContext.js';
+import type { ServiceConfig, ServiceId, User, UserRole } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
+import { useAuth } from '../context/AuthContext.js';
 
 interface SettingsViewProps {
   onRefreshStack: () => void;
+  user?: User | null;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) => {
-  const { user, isAdmin } = useAuth();
-  const { success, error, info } = useToast();
+export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user: propUser }) => {
+  const { success, error } = useToast();
+  const { user: authUser, isAdmin: authIsAdmin } = useAuth();
+  const user = propUser || authUser;
+  const isAdmin = user ? user.role === 'admin' : authIsAdmin;
 
   const [activeTab, setActiveTab] = useState<'services' | 'users'>('services');
   const [selectedServiceId, setSelectedServiceId] = useState<ServiceId>('sonarr');
-  
-  // Settings state
   const [services, setServices] = useState<Record<ServiceId, ServiceConfig>>({} as any);
-  const [systemName, setSystemName] = useState<string>('Arr House');
-  const [loading, setLoading] = useState(true);
+  const [systemName, setSystemName] = useState('Arr House');
   const [saving, setSaving] = useState(false);
-  
-  // Test connection state
   const [testing, setTesting] = useState(false);
-  const [testResults, setTestResults] = useState<Record<string, any>>({});
-
-  // Quality profiles & root folders preview
-  const [serviceProfiles, setServiceProfiles] = useState<{ qualityProfiles: QualityProfile[]; rootFolders: RootFolder[] }>({
-    qualityProfiles: [],
-    rootFolders: []
-  });
-
-  // Users state (Admin)
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; latencyMs?: number; version?: string; errorMessage?: string }>>({});
+  
+  // Users state
   const [users, setUsers] = useState<User[]>([]);
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('standard');
   const [creatingUser, setCreatingUser] = useState(false);
 
-  // Fetch settings
+  // Profiles and root folders for selected service
+  const [serviceProfiles, setServiceProfiles] = useState<{ qualityProfiles: any[]; rootFolders: any[] }>({
+    qualityProfiles: [],
+    rootFolders: []
+  });
+
+  // Fetch settings from server
   const fetchSettings = async () => {
     try {
       const token = localStorage.getItem('arr_token');
@@ -61,18 +56,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
       if (res.ok) {
         const data = await res.json();
         setServices(data.services || {});
-        setSystemName(data.systemName || 'Arr House');
+        setSystemName('Arr House');
       }
     } catch (err) {
       console.error('Failed to load settings', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   // Fetch users if admin
   const fetchUsers = async () => {
-    if (!isAdmin) return;
     try {
       const token = localStorage.getItem('arr_token');
       const res = await fetch('/api/users', {
@@ -142,7 +134,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
         },
         body: JSON.stringify({
           services,
-          systemName
+          systemName: 'Arr House'
         })
       });
 
@@ -202,14 +194,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
           ...prev,
           [selectedServiceId]: {
             ...prev[selectedServiceId],
-            status: 'error',
-            errorMessage: data.errorMessage
+            status: 'error'
           }
         }));
-        error(`${svc.name} Unreachable`, data.errorMessage || 'Failed to ping service');
+        error(`${svc.name} Test Failed`, data.errorMessage || 'Could not connect to service endpoint');
       }
-    } catch (err: any) {
-      error('Connection Test Error', err.message);
+    } catch (e: any) {
+      error('Connection Test Error', e.message);
     } finally {
       setTesting(false);
     }
@@ -217,10 +208,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUsername.trim() || newPassword.length < 6) {
-      error('Validation Error', 'Username and minimum 6-character password required.');
-      return;
-    }
+    if (!newUsername || !newPassword) return;
 
     setCreatingUser(true);
     try {
@@ -232,20 +220,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          username: newUsername.trim(),
+          username: newUsername,
           password: newPassword,
           role: newRole
         })
       });
 
-      const data = await res.json();
       if (res.ok) {
-        success('User Created', `Created account for ${newUsername} (${newRole})`);
+        success('User Created', `Account "${newUsername}" provisioned`);
         setNewUsername('');
         setNewPassword('');
         fetchUsers();
       } else {
-        error('Create User Failed', data.error || 'Could not create account');
+        const data = await res.json();
+        error('Failed to Create User', data.error || 'Server rejected request');
       }
     } catch (e: any) {
       error('Error', e.message);
@@ -281,16 +269,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Top Nav Tabs */}
-      <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div className="flex items-center gap-2">
+      {/* Top Nav Tabs - Pixel M3 Segmented Bar */}
+      <div className="flex items-center justify-between gap-4 pb-2 flex-wrap">
+        <div className="inline-flex p-1.5 rounded-full bg-[#14171f] border border-white/[0.08] gap-1">
           <button
             id="settings-tab-services"
             onClick={() => setActiveTab('services')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
               activeTab === 'services'
-                ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-white text-black font-bold shadow-sm'
+                : 'text-[#9aa0a6] hover:text-white'
             }`}
           >
             <Server className="w-3.5 h-3.5" />
@@ -301,14 +289,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
             <button
               id="settings-tab-users"
               onClick={() => setActiveTab('users')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
                 activeTab === 'users'
-                  ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  ? 'bg-[#a8c7fa] text-[#041e49] font-bold shadow-sm'
+                  : 'text-[#9aa0a6] hover:text-white'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>User Management</span>
+              <span>User Accounts</span>
             </button>
           )}
         </div>
@@ -319,9 +307,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
               href="/api/system/export-config"
               download="arr-house-config.json"
               title="Export configuration backup"
-              className="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-xl border border-slate-800 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#14171f] hover:bg-[#1a1e28] text-white text-xs font-bold rounded-full border border-white/[0.08] transition-all flex items-center gap-2 pixel-pill"
             >
-              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
               <span className="hidden sm:inline">Export Backup</span>
             </a>
           )}
@@ -331,10 +319,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
               id="save-settings-btn"
               onClick={handleSaveSettings}
               disabled={saving}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-cyan-900/30 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full shadow transition-all flex items-center gap-2 cursor-pointer pixel-pill disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+              <span>{saving ? 'Saving...' : 'Save Settings'}</span>
             </button>
           )}
         </div>
@@ -345,7 +333,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Service Selector Sidebar */}
           <div className="space-y-2 lg:col-span-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6] block mb-2 px-1">
               Stack Services
             </span>
 
@@ -370,20 +358,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                   key={id}
                   id={`service-select-${id}`}
                   onClick={() => setSelectedServiceId(id)}
-                  className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                  className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-cyan-500/10 border-cyan-500/40 text-white'
-                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300'
+                      ? 'bg-[#1a1e28] border-white/20 text-white shadow-md'
+                      : 'bg-[#14171f] border-white/[0.06] hover:border-white/10 text-[#9aa0a6]'
                   }`}
                 >
                   <div className="min-w-0">
-                    <span className="font-bold text-sm block capitalize">{id}</span>
-                    <span className="text-[11px] text-slate-400 truncate block">
+                    <span className="font-extrabold text-sm block capitalize text-white">{id}</span>
+                    <span className="text-[11px] text-[#9aa0a6] truncate block mt-0.5 font-mono">
                       {formattedUrl}
                     </span>
                   </div>
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${
-                    isConnected ? 'bg-emerald-400 shadow-sm shadow-emerald-500/50' : 'bg-slate-600'
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                    isConnected ? 'bg-[#b4e3be]' : 'bg-[#5f6368]'
                   }`} />
                 </button>
               );
@@ -393,13 +381,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
           {/* Service Configuration Form */}
           {currentService && (
             <div className="lg:col-span-3 space-y-6">
-              <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+              <div className="sonos-card p-6">
+                <div className="flex items-center justify-between border-b border-white/[0.07] pb-4 mb-5">
                   <div>
-                    <h3 className="text-base font-bold text-white capitalize">
+                    <h3 className="text-base font-extrabold text-white capitalize font-sans tracking-tight">
                       {currentService.name} Configuration Profile
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-[#9aa0a6] mt-0.5">
                       Enter internal host IP or domain for container or LAN networking.
                     </p>
                   </div>
@@ -409,9 +397,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                       id="test-connection-btn"
                       onClick={handleTestConnection}
                       disabled={testing}
-                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-cyan-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                      className="px-4 py-2 bg-[#1a1e28] hover:bg-[#222734] text-white text-xs font-bold rounded-full border border-white/[0.08] flex items-center gap-2 transition-colors cursor-pointer pixel-pill disabled:opacity-50"
                     >
-                      <RotateCw className={`w-3.5 h-3.5 ${testing ? 'animate-spin text-cyan-400' : ''}`} />
+                      <RotateCw className={`w-3.5 h-3.5 ${testing ? 'animate-spin text-[#a8c7fa]' : ''}`} />
                       <span>{testing ? 'Testing...' : 'Test Connection'}</span>
                     </button>
                   </div>
@@ -419,21 +407,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
 
                 {/* Test Connection Banner if run */}
                 {currentTestResult && (
-                  <div className={`p-3.5 rounded-xl border mb-5 flex items-start gap-3 text-xs ${
+                  <div className={`p-4 rounded-2xl border mb-5 flex items-start gap-3 text-xs ${
                     currentTestResult.success 
-                      ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
-                      : 'bg-rose-950/20 border-rose-500/30 text-rose-200'
+                      ? 'bg-[#b4e3be]/10 border-[#b4e3be]/30 text-white'
+                      : 'bg-[#f28b82]/10 border-[#f28b82]/30 text-white'
                   }`}>
                     {currentTestResult.success ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-[#b4e3be] shrink-0 mt-0.5" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <AlertCircle className="w-4 h-4 text-[#f28b82] shrink-0 mt-0.5" />
                     )}
                     <div>
-                      <p className="font-semibold">
+                      <p className="font-bold">
                         {currentTestResult.success ? 'Connection Successful' : 'Connection Failed'}
                       </p>
-                      <p className="text-slate-300 mt-0.5 text-[11px]">
+                      <p className="text-[#9aa0a6] mt-0.5 text-[11px] font-mono">
                         {currentTestResult.errorMessage || `Version: ${currentTestResult.version} • Latency: ${currentTestResult.latencyMs}ms`}
                       </p>
                     </div>
@@ -442,7 +430,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5">
                       Base URL / Hostname
                     </label>
                     <input
@@ -451,12 +439,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                       value={currentService.baseUrl}
                       onChange={(e) => handleUpdateServiceField('baseUrl', e.target.value)}
                       placeholder="e.g. https://sonarr.yourdomain.com or http://192.168.1.100"
-                      className="w-full px-3.5 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                      className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 font-medium"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5">
                       Port
                     </label>
                     <input
@@ -469,21 +457,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                         handleUpdateServiceField('port', val === '' ? null : Number(val));
                       }}
                       placeholder={currentService.disablePort ? 'No port' : 'e.g. 8989'}
-                      className={`w-full px-3.5 py-2 border rounded-xl text-xs font-mono focus:outline-none ${
+                      className={`w-full px-4 py-2.5 border rounded-full text-xs font-mono focus:outline-none ${
                         currentService.disablePort
-                          ? 'bg-slate-900/80 border-slate-800 text-slate-500 cursor-not-allowed'
-                          : 'bg-slate-950/80 border-slate-700/80 text-white placeholder-slate-500 focus:border-cyan-500'
+                          ? 'bg-[#0c0e12] border-white/[0.05] text-[#5f6368] cursor-not-allowed'
+                          : 'bg-[#1a1e28] border-white/[0.08] text-white placeholder-[#9aa0a6] focus:border-white/30'
                       }`}
                     />
                   </div>
                 </div>
 
                 {/* Cloudflare tunnel / disable port toggle */}
-                <div className="mt-3 p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between gap-3">
+                <div className="mt-4 p-4 rounded-2xl bg-[#1a1e28] border border-white/[0.06] flex items-center justify-between gap-3">
                   <div className="text-xs">
-                    <span className="font-semibold text-slate-200 block">Cloudflare Tunnel / Reverse Proxy (Disable Port)</span>
-                    <span className="text-slate-400 text-[11px] block mt-0.5">
-                      Enable this if you access {currentService.name} via Cloudflare Tunnels, custom domain, or standard HTTPS port 443. Arr House will not append any port number.
+                    <span className="font-bold text-white block">Cloudflare Tunnel / Reverse Proxy (Disable Port)</span>
+                    <span className="text-[#9aa0a6] text-[11px] block mt-0.5">
+                      Enable if accessing {currentService.name} via Cloudflare Tunnels, custom domain, or standard HTTPS port 443. Arr House will not append any port number.
                     </span>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer shrink-0">
@@ -494,14 +482,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                       onChange={(e) => handleUpdateServiceField('disablePort', e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-10 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
+                    <div className="w-11 h-6 bg-[#0c0e12] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#b4e3be]"></div>
                   </label>
                 </div>
 
                 <div className="mt-4">
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5 flex items-center justify-between">
                     <span>API Key</span>
-                    <span className="text-[10px] text-slate-500 font-normal">
+                    <span className="text-[10px] text-[#9aa0a6] font-normal">
                       Located in {currentService.name} Settings &gt; General &gt; Security
                     </span>
                   </label>
@@ -511,27 +499,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                     value={currentService.apiKey || ''}
                     onChange={(e) => handleUpdateServiceField('apiKey', e.target.value)}
                     placeholder={currentService.apiKey ? '••••••••••••' : 'Enter API Key'}
-                    className="w-full px-3.5 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                    className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 font-mono"
                   />
                 </div>
 
-                <div className="mt-4 flex items-center gap-6 pt-3 border-t border-slate-800">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                <div className="mt-5 flex items-center gap-6 pt-4 border-t border-white/[0.07]">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs text-white font-medium">
                     <input
                       type="checkbox"
                       checked={currentService.enabled}
                       onChange={(e) => handleUpdateServiceField('enabled', e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-700 text-cyan-600 bg-slate-950"
+                      className="w-4 h-4 rounded border-white/20 bg-[#0c0e12] text-white"
                     />
                     <span>Service Enabled</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs text-white font-medium">
                     <input
                       type="checkbox"
                       checked={currentService.useSsl}
                       onChange={(e) => handleUpdateServiceField('useSsl', e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-700 text-cyan-600 bg-slate-950"
+                      className="w-4 h-4 rounded border-white/20 bg-[#0c0e12] text-white"
                     />
                     <span>Use HTTPS / SSL</span>
                   </label>
@@ -539,39 +527,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
               </div>
 
               {/* Profiles & Root Folders Display */}
-              <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
-                <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                  <FolderTree className="w-4 h-4 text-cyan-400" />
-                  <span>Quality Profiles & Root Storage</span>
+              <div className="sonos-card p-6">
+                <h4 className="text-sm font-extrabold text-white mb-3.5 flex items-center gap-2 font-sans tracking-tight">
+                  <FolderTree className="w-4 h-4 text-[#a8c7fa]" />
+                  <span>Quality Profiles & Storage Roots</span>
                 </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Quality Profiles */}
-                  <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  <div className="bg-[#1a1e28] p-4 rounded-2xl border border-white/[0.06]">
+                    <span className="text-[10px] font-bold text-[#9aa0a6] uppercase tracking-wider block mb-2.5">
                       Available Quality Profiles
                     </span>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {serviceProfiles.qualityProfiles.map((p) => (
-                        <div key={p.id} className="text-xs text-slate-300 py-1 px-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
-                          <span>{p.name}</span>
-                          <span className="text-[10px] font-mono text-cyan-400">ID {p.id}</span>
+                        <div key={p.id} className="text-xs text-white py-1.5 px-3 rounded-xl bg-[#14171f] border border-white/[0.05] flex items-center justify-between">
+                          <span className="font-medium">{p.name}</span>
+                          <span className="text-[10px] font-mono text-[#a8c7fa]">ID {p.id}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   {/* Root Folders */}
-                  <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  <div className="bg-[#1a1e28] p-4 rounded-2xl border border-white/[0.06]">
+                    <span className="text-[10px] font-bold text-[#9aa0a6] uppercase tracking-wider block mb-2.5">
                       Configured Host Folders
                     </span>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {serviceProfiles.rootFolders.map((r) => (
-                        <div key={r.id} className="text-xs text-slate-300 py-1 px-2 rounded bg-slate-900/60 border border-slate-800/80 flex items-center justify-between font-mono">
+                        <div key={r.id} className="text-xs text-white py-1.5 px-3 rounded-xl bg-[#14171f] border border-white/[0.05] flex items-center justify-between font-mono">
                           <span className="truncate">{r.path}</span>
                           {r.freeSpaceBytes && (
-                            <span className="text-[10px] text-emerald-400 shrink-0 ml-2">
+                            <span className="text-[10px] text-[#b4e3be] shrink-0 ml-2 font-mono">
                               {(r.freeSpaceBytes / 1e12).toFixed(1)} TB Free
                             </span>
                           )}
@@ -590,15 +578,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
       {activeTab === 'users' && isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Create User Form */}
-          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
-            <h3 className="text-base font-bold text-white mb-1">Create Account</h3>
-            <p className="text-xs text-slate-400 mb-4">
+          <div className="sonos-card p-6">
+            <h3 className="text-base font-extrabold text-white mb-1 font-sans tracking-tight">Create Account</h3>
+            <p className="text-xs text-[#9aa0a6] mb-5">
               Add read-only accounts for family or standard users for media search.
             </p>
 
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5">
                   Username
                 </label>
                 <input
@@ -608,12 +596,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
                   placeholder="e.g. guest"
-                  className="w-full px-3.5 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white focus:outline-none focus:border-white/30"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5">
                   Password
                 </label>
                 <input
@@ -623,19 +611,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Min 6 characters"
-                  className="w-full px-3.5 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
+                  className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white focus:outline-none focus:border-white/30 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-[#9aa0a6] uppercase tracking-wider mb-1.5">
                   Role Permissions
                 </label>
                 <select
                   id="create-user-role"
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
-                  className="w-full px-3.5 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white focus:outline-none focus:border-white/30 cursor-pointer"
                 >
                   <option value="standard">Standard (Search, View &amp; Request Media)</option>
                   <option value="readonly">Read-Only (View Library &amp; Calendar only)</option>
@@ -647,7 +635,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                 id="create-user-submit-btn"
                 type="submit"
                 disabled={creatingUser}
-                className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-purple-900/30 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full shadow transition-all cursor-pointer disabled:opacity-50 pixel-pill mt-2"
               >
                 {creatingUser ? 'Creating...' : 'Create Account'}
               </button>
@@ -655,26 +643,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
           </div>
 
           {/* User List Table */}
-          <div className="lg:col-span-2 bg-slate-900/70 border border-slate-800 rounded-2xl p-6">
-            <h3 className="text-base font-bold text-white mb-4">Active User Accounts</h3>
+          <div className="lg:col-span-2 sonos-card p-6">
+            <h3 className="text-base font-extrabold text-white mb-4 font-sans tracking-tight">Active User Accounts</h3>
 
-            <div className="divide-y divide-slate-800">
+            <div className="divide-y divide-white/[0.06]">
               {users.map((u) => (
-                <div key={u.id} className="py-3 flex items-center justify-between gap-4">
+                <div key={u.id} className="py-3.5 flex items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-white">{u.username}</span>
-                      <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${
+                      <span className="font-bold text-sm text-white">{u.username}</span>
+                      <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
                         u.role === 'admin' 
-                          ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                          ? 'bg-[#a8c7fa] text-[#041e49]' 
                           : u.role === 'standard'
-                          ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
-                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                          ? 'bg-[#b4e3be] text-[#072711]'
+                          : 'bg-white/10 text-white'
                       }`}>
                         {u.role}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-[#9aa0a6] font-mono mt-0.5 block">
                       Created: {new Date(u.createdAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -682,7 +670,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                   {u.id !== user?.id && (
                     <button
                       onClick={() => handleDeleteUser(u.id, u.username)}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors"
+                      className="p-2 text-[#9aa0a6] hover:text-[#f28b82] rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
                       title="Delete User"
                     >
                       <Trash2 className="w-4 h-4" />

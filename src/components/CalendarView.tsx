@@ -7,11 +7,8 @@ import {
   Film, 
   Music, 
   Download, 
-  Check, 
   Copy, 
   ExternalLink,
-  ListFilter,
-  CheckCircle2,
   X
 } from 'lucide-react';
 import type { CalendarEvent, ServiceId } from '../types.js';
@@ -89,305 +86,398 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
     switch (svc) {
       case 'sonarr':
         return {
-          bg: 'bg-sky-500/10 border-sky-500/30 text-sky-300',
-          dot: 'bg-sky-400',
-          badge: 'bg-sky-500/20 text-sky-300'
+          bg: 'bg-[#a8c7fa]/15 text-[#a8c7fa] border-white/[0.08]',
+          dot: 'bg-[#a8c7fa]',
+          badge: 'bg-[#a8c7fa] text-[#041e49]'
         };
       case 'radarr':
         return {
-          bg: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
-          dot: 'bg-amber-400',
-          badge: 'bg-amber-500/20 text-amber-300'
+          bg: 'bg-[#e0d0b8]/15 text-[#e0d0b8] border-white/[0.08]',
+          dot: 'bg-[#e0d0b8]',
+          badge: 'bg-[#e0d0b8] text-[#3e2723]'
         };
       case 'lidarr':
         return {
-          bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
-          dot: 'bg-emerald-400',
-          badge: 'bg-emerald-500/20 text-emerald-300'
+          bg: 'bg-[#b4e3be]/15 text-[#b4e3be] border-white/[0.08]',
+          dot: 'bg-[#b4e3be]',
+          badge: 'bg-[#b4e3be] text-[#072711]'
         };
       default:
         return {
-          bg: 'bg-slate-500/10 border-slate-500/30 text-slate-300',
-          dot: 'bg-slate-400',
-          badge: 'bg-slate-500/20 text-slate-300'
+          bg: 'bg-white/10 text-white border-white/[0.08]',
+          dot: 'bg-white',
+          badge: 'bg-white text-black'
         };
     }
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Top Header with month nav & filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800 p-4 rounded-2xl">
+      {/* Calendar Top Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-white tracking-tight font-sans">
+            Library Calendar
+          </h2>
+          <p className="text-xs sm:text-sm text-[#9aa0a6] mt-1">
+            Tracking air dates and release drops for media in your collection.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Subscribe to iCal Feed Button */}
+          <button
+            id="subscribe-calendar-btn"
+            onClick={() => setShowSubscribeModal(true)}
+            className="px-4 py-2 rounded-full bg-[#14171f] hover:bg-[#1a1e28] text-white border border-white/[0.08] text-xs font-bold flex items-center gap-2 transition-all cursor-pointer pixel-pill"
+          >
+            <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
+            <span>Sync iCal Feed</span>
+          </button>
+
+          {/* View toggle capsule */}
+          <div className="flex items-center bg-[#14171f] p-1 rounded-full border border-white/[0.08]">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
+                viewMode === 'month' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              }`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setViewMode('agenda')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
+                viewMode === 'agenda' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              }`}
+            >
+              Agenda
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Navigation Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14171f] border border-white/[0.07] p-3.5 rounded-2xl">
+        {/* Month Picker Controls */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-xl p-1">
+          <div className="flex items-center gap-1 bg-[#1a1e28] border border-white/[0.08] rounded-full p-1">
             <button
               onClick={prevMonth}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
+              title="Previous Month"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={today}
-              className="px-2.5 py-1 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-3 py-1 text-xs font-bold text-white hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer pixel-pill"
             >
               Today
             </button>
             <button
               onClick={nextMonth}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
+              title="Next Month"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+          <h3 className="text-lg font-extrabold text-white tracking-tight font-sans">
             {monthNames[month]} {year}
-          </h2>
+          </h3>
         </div>
 
-        {/* Media type filter buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Service Filters - Pixel Capsule Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => toggleService('sonarr')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              enabledServices.sonarr
-                ? 'bg-sky-500/15 border-sky-500/30 text-sky-300'
-                : 'bg-slate-950 border-slate-800 text-slate-600 opacity-60'
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
+              enabledServices.sonarr 
+                ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border-[#a8c7fa]/40 font-bold' 
+                : 'bg-[#1a1e28] text-[#5f6368] border-transparent'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-sky-400" />
-            <span>TV Shows</span>
+            <Tv className="w-3.5 h-3.5" />
+            <span>TV (Sonarr)</span>
           </button>
 
           <button
             onClick={() => toggleService('radarr')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              enabledServices.radarr
-                ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                : 'bg-slate-950 border-slate-800 text-slate-600 opacity-60'
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
+              enabledServices.radarr 
+                ? 'bg-[#e0d0b8]/20 text-[#e0d0b8] border-[#e0d0b8]/40 font-bold' 
+                : 'bg-[#1a1e28] text-[#5f6368] border-transparent'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span>Movies</span>
+            <Film className="w-3.5 h-3.5" />
+            <span>Movies (Radarr)</span>
           </button>
 
           <button
             onClick={() => toggleService('lidarr')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              enabledServices.lidarr
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                : 'bg-slate-950 border-slate-800 text-slate-600 opacity-60'
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
+              enabledServices.lidarr 
+                ? 'bg-[#b4e3be]/20 text-[#b4e3be] border-[#b4e3be]/40 font-bold' 
+                : 'bg-[#1a1e28] text-[#5f6368] border-transparent'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>Music</span>
-          </button>
-
-          {/* Subscribe Button */}
-          <button
-            id="btn-subscribe-calendar"
-            onClick={() => setShowSubscribeModal(true)}
-            className="ml-auto md:ml-2 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>iCal / WebCal Feed</span>
+            <Music className="w-3.5 h-3.5" />
+            <span>Music (Lidarr)</span>
           </button>
         </div>
       </div>
 
-      {/* Month View Grid */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {/* Days of week */}
-        <div className="grid grid-cols-7 border-b border-slate-800 bg-slate-950/60 text-center py-2 text-xs font-semibold uppercase text-slate-400">
-          <div>Sun</div>
-          <div>Mon</div>
-          <div>Tue</div>
-          <div>Wed</div>
-          <div>Thu</div>
-          <div>Fri</div>
-          <div>Sat</div>
+      {/* Calendar Views */}
+      {viewMode === 'month' ? (
+        <div className="sonos-card overflow-hidden">
+          {/* Day Names Header */}
+          <div className="grid grid-cols-7 border-b border-white/[0.07] bg-[#0c0e12]/60 text-center py-2.5 text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+
+          {/* Month Days Grid */}
+          <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-white/[0.05]">
+            {calendarDays.map((day, idx) => {
+              if (day === null) {
+                return (
+                  <div key={`empty-${idx}`} className="bg-[#0c0e12]/30 min-h-[110px] p-2" />
+                );
+              }
+
+              const dayEvents = getDayEvents(day);
+              const isToday = 
+                new Date().getFullYear() === year &&
+                new Date().getMonth() === month &&
+                new Date().getDate() === day;
+
+              return (
+                <div
+                  key={`day-${day}`}
+                  className={`min-h-[120px] p-2 flex flex-col justify-between transition-colors hover:bg-white/[0.02] ${
+                    isToday ? 'bg-white/[0.04]' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span 
+                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                        isToday 
+                          ? 'bg-white text-black font-extrabold shadow-sm' 
+                          : 'text-[#9aa0a6]'
+                      }`}
+                    >
+                      {day}
+                    </span>
+                    {dayEvents.length > 0 && (
+                      <span className="text-[10px] font-bold text-white bg-white/[0.08] px-2 py-0.5 rounded-full">
+                        {dayEvents.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Day Events Stack */}
+                  <div className="space-y-1 overflow-y-auto max-h-[85px] scrollbar-none flex-1">
+                    {dayEvents.map((ev) => {
+                      const style = getServiceStyles(ev.service);
+                      return (
+                        <button
+                          key={ev.id}
+                          onClick={() => setSelectedEvent(ev)}
+                          className={`w-full text-left p-1 rounded-md text-[10px] font-medium border truncate block transition-all hover:scale-[1.02] cursor-pointer ${style.bg}`}
+                          title={`${ev.seriesOrArtistTitle || ev.title} - ${ev.title}`}
+                        >
+                          <div className="flex items-center gap-1 truncate">
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
+                            <span className="font-bold truncate">
+                              {ev.seriesOrArtistTitle || ev.title}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-
-        {/* Days cells */}
-        <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-800/60">
-          {calendarDays.map((day, idx) => {
-            if (day === null) {
-              return <div key={`empty-${idx}`} className="bg-slate-950/30 min-h-[100px] p-2" />;
-            }
-
-            const dayEvents = getDayEvents(day);
-            const isToday = 
-              new Date().getFullYear() === year &&
-              new Date().getMonth() === month &&
-              new Date().getDate() === day;
-
-            return (
-              <div
-                key={`day-${day}`}
-                className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors hover:bg-slate-800/30 ${
-                  isToday ? 'bg-cyan-950/20' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                      isToday ? 'bg-cyan-500 text-slate-950 font-extrabold' : 'text-slate-400'
-                    }`}
+      ) : (
+        /* Agenda View */
+        <div className="sonos-card p-6">
+          {filteredEvents.length === 0 ? (
+            <div className="py-16 text-center text-[#9aa0a6] text-sm font-medium">
+              No scheduled releases match the selected filters.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredEvents.map((ev) => {
+                const style = getServiceStyles(ev.service);
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
+                    className="p-4 rounded-2xl bg-[#1a1e28] border border-white/[0.06] flex items-center justify-between gap-4 hover:border-white/20 transition-all cursor-pointer"
                   >
-                    {day}
-                  </span>
-                </div>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${style.badge}`}>
+                        {ev.service}
+                      </span>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-white truncate tracking-tight">
+                          {ev.seriesOrArtistTitle || ev.title}
+                        </h4>
+                        <p className="text-xs text-[#9aa0a6] truncate">
+                          {ev.title}
+                        </p>
+                      </div>
+                    </div>
 
-                {/* Day events pills */}
-                <div className="space-y-1 overflow-y-auto max-h-[80px] scrollbar-none flex-1">
-                  {dayEvents.map((evt) => {
-                    const styles = getServiceStyles(evt.service);
-                    return (
-                      <button
-                        key={evt.id}
-                        onClick={() => setSelectedEvent(evt)}
-                        className={`w-full text-left p-1 rounded-md text-[10px] font-medium border truncate block transition-all hover:scale-[1.02] cursor-pointer ${styles.bg}`}
-                        title={`${evt.service.toUpperCase()}: ${evt.seriesOrArtistTitle || ''} ${evt.title}`}
-                      >
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${styles.dot}`} />
-                        <span className="font-semibold text-white mr-1">
-                          {evt.episodeNumber || evt.service.slice(0, 3).toUpperCase()}
-                        </span>
-                        <span>{evt.seriesOrArtistTitle || evt.title}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-bold text-white block font-mono">{ev.date}</span>
+                      <span className="text-[10px] text-[#9aa0a6] font-medium">
+                        {ev.hasFile ? 'Downloaded' : 'Monitored'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Event Details Inspector Popup */}
+      {/* Event Details Modal */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 shadow-2xl">
-            <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#14171f] border border-white/[0.09] rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between">
               <div>
-                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${getServiceStyles(selectedEvent.service).bg}`}>
+                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${getServiceStyles(selectedEvent.service).badge}`}>
                   {selectedEvent.service}
                 </span>
-                <h3 className="text-base font-bold text-white mt-1.5">
+                <h3 className="text-lg font-extrabold text-white mt-1.5 tracking-tight font-sans">
                   {selectedEvent.seriesOrArtistTitle || selectedEvent.title}
                 </h3>
-                {selectedEvent.seriesOrArtistTitle && (
-                  <p className="text-xs text-slate-300 font-medium">{selectedEvent.title}</p>
-                )}
+                <p className="text-xs text-[#9aa0a6]">
+                  {selectedEvent.title}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Release Date:</span>
-                <span className="text-white font-mono font-medium">{selectedEvent.date}</span>
+            <div className="p-4 rounded-2xl bg-[#1a1e28] border border-white/[0.06] space-y-2 text-xs">
+              <div className="flex justify-between text-[#9aa0a6]">
+                <span>Air Date:</span>
+                <strong className="text-white font-mono">{selectedEvent.date}</strong>
               </div>
-              {selectedEvent.episodeNumber && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Episode:</span>
-                  <span className="text-cyan-400 font-mono font-medium">{selectedEvent.episodeNumber}</span>
-                </div>
+              <div className="flex justify-between text-[#9aa0a6]">
+                <span>Status:</span>
+                <strong className="text-white capitalize">{selectedEvent.hasFile ? 'File Present' : 'Monitored (Pending)'}</strong>
+              </div>
+              {selectedEvent.overview && (
+                <p className="text-xs text-[#9aa0a6] pt-2 border-t border-white/[0.06] leading-relaxed">
+                  {selectedEvent.overview}
+                </p>
               )}
-              <div className="flex justify-between">
-                <span className="text-slate-500">File Status:</span>
-                <span className={selectedEvent.hasFile ? 'text-emerald-400 font-medium' : 'text-amber-400 font-medium'}>
-                  {selectedEvent.hasFile ? 'Downloaded & Ready' : 'Awaiting Indexer Air Date'}
-                </span>
-              </div>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              {selectedEvent.overview || 'Release event synced via *arr calendar endpoint.'}
-            </p>
-
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
-            >
-              Close
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="px-5 py-2 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full cursor-pointer pixel-pill"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Subscribe iCal / WebCal Modal */}
+      {/* Subscribe iCal Modal */}
       {showSubscribeModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-bold text-white">Subscribe to Unified Calendar Feed</h3>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#14171f] border border-white/[0.09] rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="w-10 h-10 rounded-full bg-white/[0.06] text-white flex items-center justify-center mb-2 border border-white/10">
+                  <CalendarIcon className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-extrabold text-white tracking-tight font-sans">
+                  Subscribe to Calendar Feed
+                </h3>
+                <p className="text-xs text-[#9aa0a6] mt-1">
+                  Sync your Arr House releases with Apple Calendar, Google Calendar, or Outlook.
+                </p>
               </div>
               <button
                 onClick={() => setShowSubscribeModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-              Subscribe on your iPhone, Android, Google Calendar, or Outlook to automatically receive release notifications for all tracked TV episodes, movie release dates, and music albums.
-            </p>
-
-            <div className="space-y-3 mb-5">
+            <div className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  Direct iCal / ICS Link
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={feedUrl}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-cyan-300"
-                  />
-                  <button
-                    onClick={() => copyToClipboard(feedUrl, 'iCal')}
-                    className="px-3 py-2 bg-slate-800 hover:bg-slate-750 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                  1-Click Apple Calendar / Outlook WebCal
+                <label className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6] block mb-1.5">
+                  WebCal Quick Subscribe (Apple / Outlook)
                 </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     readOnly
                     value={webcalUrl}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-cyan-300"
+                    className="w-full bg-[#1a1e28] border border-white/[0.08] rounded-full px-4 py-2.5 text-xs text-[#e3e6ed] font-mono focus:outline-none"
                   />
-                  <a
-                    href={webcalUrl}
-                    className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                  <button
+                    onClick={() => copyToClipboard(webcalUrl, 'WebCal')}
+                    className="px-4 py-2.5 bg-white text-black hover:bg-neutral-200 rounded-full text-xs font-bold shrink-0 transition-colors cursor-pointer pixel-pill"
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Open in App</span>
-                  </a>
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6] block mb-1.5">
+                  Standard iCal Feed URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={feedUrl}
+                    className="w-full bg-[#1a1e28] border border-white/[0.08] rounded-full px-4 py-2.5 text-xs text-[#e3e6ed] font-mono focus:outline-none"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(feedUrl, 'iCal')}
+                    className="px-4 py-2.5 bg-[#1a1e28] hover:bg-[#222734] border border-white/10 rounded-full text-xs text-white font-bold shrink-0 transition-colors cursor-pointer pixel-pill"
+                  >
+                    Copy
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="text-[11px] text-slate-500 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-              <strong>Google Calendar Setup:</strong> In Google Calendar, click the <em>+</em> next to <em>Other calendars</em>, choose <em>From URL</em>, and paste the direct iCal link above.
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowSubscribeModal(false)}
+                className="px-5 py-2.5 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full cursor-pointer pixel-pill"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

@@ -9,11 +9,9 @@ import {
   ArrowUpRight, 
   CheckCircle2, 
   AlertTriangle, 
-  HardDrive,
-  Calendar,
-  ExternalLink
+  Calendar
 } from 'lucide-react';
-import type { MediaItem, QueueItem, CalendarEvent, ProwlarrIndexer } from '../types.js';
+import type { QueueItem, CalendarEvent, ProwlarrIndexer } from '../types.js';
 import type { NavTab } from './Sidebar.js';
 
 interface DashboardViewProps {
@@ -31,118 +29,135 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   calendar = [],
   indexers = [],
   onNavigate,
-  onOpenAddModal
 }) => {
   const safeQueue = Array.isArray(queue) ? queue : [];
   const safeCalendar = Array.isArray(calendar) ? calendar : [];
   const safeIndexers = Array.isArray(indexers) ? indexers : [];
 
-  const formatBytes = (bytes: number) => {
-    if (!bytes || bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* 4-Card Metric Grid */}
+    <div className="p-4 sm:p-6 lg:p-8 space-y-7 max-w-7xl mx-auto">
+      {/* 4-Widget Metric Grid - Pixel M3 & Sonos Precision Hardware */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Items */}
+        {/* Total Library */}
         <div 
           onClick={() => onNavigate('libraries')}
-          className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 hover:border-slate-700 transition-all cursor-pointer group"
+          className="sonos-card p-5 hover:bg-[#181c25] transition-all cursor-pointer group relative overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Total Library</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+              Total Library
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#a8c7fa]/10 text-[#a8c7fa] flex items-center justify-center group-hover:scale-105 transition-transform">
               <Film className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
             {overview?.totalMediaItems ?? 14}
           </div>
-          <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-400 flex-wrap">
-            <span className="text-sky-400 font-medium">{overview?.seriesCount ?? 4} TV</span> • 
-            <span className="text-amber-400 font-medium">{overview?.moviesCount ?? 3} Movies</span> • 
-            <span className="text-emerald-400 font-medium">{overview?.musicCount ?? 3} Music</span>
+          <div className="flex items-center gap-2 mt-3 text-xs text-[#9aa0a6] flex-wrap">
+            <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[#a8c7fa] font-semibold text-[11px]">
+              {overview?.seriesCount ?? 4} TV
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[#e0d0b8] font-semibold text-[11px]">
+              {overview?.moviesCount ?? 3} Movies
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[#b4e3be] font-semibold text-[11px]">
+              {overview?.musicCount ?? 3} Music
+            </span>
           </div>
         </div>
 
         {/* Active Queue */}
         <div 
           onClick={() => onNavigate('queue')}
-          className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 hover:border-slate-700 transition-all cursor-pointer group"
+          className="sonos-card p-5 hover:bg-[#181c25] transition-all cursor-pointer group relative overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Active Queue</span>
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+              Active Transfers
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#b4e3be]/10 text-[#b4e3be] flex items-center justify-center group-hover:scale-105 transition-transform">
               <DownloadCloud className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-baseline gap-2">
+          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-baseline gap-2 font-sans">
             {safeQueue.length}
-            <span className="text-xs font-normal text-cyan-400">tasks active</span>
+            <span className="text-xs font-semibold text-[#b4e3be] uppercase tracking-wider">
+              active
+            </span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-400">
-            {safeQueue.length > 0 
-              ? `${safeQueue.length} ${safeQueue.length === 1 ? 'item' : 'items'} in download queue`
-              : 'Download queue idle'}
+          <div className="mt-3 text-xs text-[#9aa0a6] flex items-center gap-1.5">
+            {safeQueue.length > 0 ? (
+              <>
+                <div className="flex items-center gap-0.5 h-3">
+                  <span className="w-0.5 h-2 bg-[#b4e3be] rounded-full animate-sonos-wave-1" />
+                  <span className="w-0.5 h-3 bg-[#b4e3be] rounded-full animate-sonos-wave-2" />
+                  <span className="w-0.5 h-1.5 bg-[#b4e3be] rounded-full animate-sonos-wave-3" />
+                </div>
+                <span className="text-white font-medium">Streaming / Downloading</span>
+              </>
+            ) : (
+              <span>Queue idle & standby</span>
+            )}
           </div>
         </div>
 
         {/* Monitored Waitlist */}
         <div 
           onClick={() => onNavigate('queue')}
-          className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 hover:border-slate-700 transition-all cursor-pointer group"
+          className="sonos-card p-5 hover:bg-[#181c25] transition-all cursor-pointer group relative overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Monitored Waitlist</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+              Monitored
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#e0d0b8]/10 text-[#e0d0b8] flex items-center justify-center group-hover:scale-105 transition-transform">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
             {overview?.waitlistCount ?? 3}
           </div>
-          <div className="mt-2 text-[11px] text-slate-400">
-            Unreleased or awaiting indexer grabs
+          <div className="mt-3 text-xs text-[#9aa0a6] truncate">
+            Awaiting drops & indexer grabs
           </div>
         </div>
 
         {/* Indexers / Prowlarr */}
         <div 
           onClick={() => onNavigate('queue')}
-          className="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 hover:border-slate-700 transition-all cursor-pointer group"
+          className="sonos-card p-5 hover:bg-[#181c25] transition-all cursor-pointer group relative overflow-hidden"
         >
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Prowlarr Indexers</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+              Indexers
+            </span>
+            <div className="w-9 h-9 rounded-full bg-[#81c784]/10 text-[#81c784] flex items-center justify-center group-hover:scale-105 transition-transform">
               <Radio className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-baseline gap-2">
+          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-baseline gap-2 font-sans">
             {safeIndexers.filter(i => i.status === 'healthy').length}
-            <span className="text-xs font-normal text-slate-400">/ {safeIndexers.length} online</span>
+            <span className="text-xs font-semibold text-[#9aa0a6]">/ {safeIndexers.length} online</span>
           </div>
-          <div className="mt-2 text-[11px] text-emerald-400">
-            {overview?.grabs24h ?? 277} grabs completed in past 24h
+          <div className="mt-3 text-xs text-[#b4e3be] font-medium flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#b4e3be]" />
+            <span>{overview?.grabs24h ?? 277} grabs in 24h</span>
           </div>
         </div>
       </div>
 
-      {/* Services Health Grid */}
+      {/* Services Health Grid - Sonos Machined Module Finish */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300">
-            Connected Stack Profiles
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6]">
+            Connected Stack
           </h3>
           <button
             onClick={() => onNavigate('settings')}
-            className="text-xs font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+            className="text-xs font-semibold text-[#a8c7fa] hover:text-white flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1"
           >
-            <span>Configure Services</span>
+            <span>Configure</span>
             <ArrowUpRight className="w-3 h-3" />
           </button>
         </div>
@@ -165,34 +180,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div 
                 key={id} 
                 onClick={() => onNavigate('settings')}
-                className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5 hover:border-slate-700 transition-all cursor-pointer"
+                className="bg-[#14171f] border border-white/[0.07] rounded-2xl p-4 hover:border-white/[0.14] hover:bg-[#181c25] transition-all cursor-pointer group"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-slate-800 text-cyan-400 flex items-center justify-center">
-                      <Icon className="w-3.5 h-3.5" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-[#202532] text-white flex items-center justify-center group-hover:bg-[#282e3e] transition-colors">
+                      <Icon className="w-4 h-4" />
                     </div>
-                    <span className="font-bold text-sm text-white">{name}</span>
+                    <span className="font-extrabold text-sm text-white tracking-tight">{name}</span>
                   </div>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-[#9aa0a6]">
                     {portLabel}
                   </span>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center justify-between">
-                  <span>{count}</span>
+                <div className="text-xs text-[#9aa0a6] flex items-center justify-between">
+                  <span className="font-medium text-white/80">{count}</span>
                   {isConnected ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                    <span className="text-[#b4e3be] flex items-center gap-1 font-semibold text-[11px]">
                       <CheckCircle2 className="w-3 h-3" />
-                      {svcStatus?.latencyMs ? `${svcStatus.latencyMs}ms` : 'Connected'}
+                      {svcStatus?.latencyMs ? `${svcStatus.latencyMs}ms` : 'Active'}
                     </span>
                   ) : isError ? (
-                    <span className="text-rose-400 flex items-center gap-1 font-medium">
+                    <span className="text-[#f28b82] flex items-center gap-1 font-semibold text-[11px]">
                       <AlertTriangle className="w-3 h-3" />
                       Offline
                     </span>
                   ) : (
-                    <span className="text-slate-500 flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-slate-600" />
+                    <span className="text-[#9aa0a6] flex items-center gap-1 text-[11px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
                       Untested
                     </span>
                   )}
@@ -203,26 +218,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* Split Section: Active Downloads & Upcoming Releases */}
+      {/* Split Section: Active Downloads (Sonos Audio Track Feel) & Upcoming Releases (Pixel At-a-Glance) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Active Downloads Strip */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 flex flex-col">
+        <div className="sonos-card p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <DownloadCloud className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-bold text-white">Active Queue & Downloads</h3>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-[#b4e3be]/10 text-[#b4e3be] flex items-center justify-center">
+                <DownloadCloud className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="text-sm font-extrabold text-white tracking-tight">Active Queue & Transfers</h3>
             </div>
             <button
               onClick={() => onNavigate('queue')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 cursor-pointer"
+              className="text-xs text-[#a8c7fa] hover:text-white font-semibold flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1"
             >
-              <span>View Full Queue</span>
+              <span>Full Queue</span>
               <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
 
           {safeQueue.length === 0 ? (
-            <div className="py-8 text-center text-slate-500 text-xs">
+            <div className="py-12 text-center text-[#9aa0a6] text-xs">
               No active downloads in queue.
             </div>
           ) : (
@@ -230,28 +247,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {safeQueue.slice(0, 3).map((item) => (
                 <div 
                   key={item.id}
-                  className="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3"
+                  className="bg-[#1a1e28] border border-white/[0.06] rounded-2xl p-4 transition-all"
                 >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-xs font-semibold text-white truncate max-w-xs">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-xs font-bold text-white truncate max-w-xs font-sans">
                       {item.title}
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-cyan-400 shrink-0">
-                      {item.status} ({item.progress.toFixed(0)}%)
+                    <span className="text-[11px] font-semibold text-[#b4e3be] px-2 py-0.5 rounded-full bg-[#b4e3be]/10 shrink-0">
+                      {item.progress.toFixed(0)}%
                     </span>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
+                  {/* Sonos Scrubber Style Progress Bar */}
+                  <div className="w-full h-1.5 bg-white/[0.08] rounded-full overflow-hidden mb-2.5">
                     <div 
-                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500"
+                      className="h-full bg-white rounded-full transition-all duration-300"
                       style={{ width: `${item.progress}%` }}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{item.downloadClient} ({item.protocol})</span>
-                    <span>ETA: {item.timeleft || 'Calculating...'}</span>
+                  <div className="flex items-center justify-between text-[11px] text-[#9aa0a6]">
+                    <span className="font-mono">{item.downloadClient} • {item.protocol}</span>
+                    <span className="font-mono">ETA: {item.timeleft || 'Calculating...'}</span>
                   </div>
                 </div>
               ))}
@@ -259,16 +276,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           )}
         </div>
 
-        {/* Upcoming Releases Strip */}
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 flex flex-col">
+        {/* Upcoming Releases Strip - Pixel At-a-Glance Style */}
+        <div className="sonos-card p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-bold text-white">Upcoming Releases</h3>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-[#a8c7fa]/10 text-[#a8c7fa] flex items-center justify-center">
+                <Calendar className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="text-sm font-extrabold text-white tracking-tight">Upcoming Releases</h3>
             </div>
             <button
               onClick={() => onNavigate('calendar')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 cursor-pointer"
+              className="text-xs text-[#a8c7fa] hover:text-white font-semibold flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1"
             >
               <span>Full Calendar</span>
               <ArrowUpRight className="w-3 h-3" />
@@ -276,39 +295,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {safeCalendar.length === 0 ? (
-            <div className="py-8 text-center text-slate-500 text-xs">
+            <div className="py-12 text-center text-[#9aa0a6] text-xs">
               No upcoming scheduled releases found.
             </div>
           ) : (
             <div className="space-y-3 flex-1">
               {safeCalendar.slice(0, 3).map((event) => {
-                const serviceColor = 
-                  event.service === 'sonarr' ? 'text-sky-400 border-sky-500/30 bg-sky-500/10' :
-                  event.service === 'radarr' ? 'text-amber-400 border-amber-500/30 bg-amber-500/10' :
-                  'text-emerald-400 border-emerald-500/30 bg-emerald-500/10';
+                const serviceBadge = 
+                  event.service === 'sonarr' ? 'bg-[#a8c7fa]/15 text-[#a8c7fa]' :
+                  event.service === 'radarr' ? 'bg-[#e0d0b8]/15 text-[#e0d0b8]' :
+                  'bg-[#b4e3be]/15 text-[#b4e3be]';
 
                 return (
                   <div
                     key={event.id}
-                    className="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between gap-3"
+                    className="bg-[#1a1e28] border border-white/[0.06] rounded-2xl p-3.5 flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border uppercase ${serviceColor}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${serviceBadge}`}>
                           {event.service}
                         </span>
-                        <span className="text-xs font-semibold text-white truncate">
+                        <span className="text-xs font-bold text-white truncate">
                           {event.seriesOrArtistTitle || event.title}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 truncate">
+                      <p className="text-[11px] text-[#9aa0a6] truncate pl-0.5">
                         {event.title}
                       </p>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-xs font-bold text-slate-300 block">{event.date}</span>
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-xs font-bold text-white block font-mono">{event.date}</span>
+                      <span className="text-[10px] text-[#9aa0a6] font-medium">
                         {event.hasFile ? 'Downloaded' : 'Monitored'}
                       </span>
                     </div>
