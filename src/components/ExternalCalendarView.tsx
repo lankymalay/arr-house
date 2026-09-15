@@ -23,16 +23,8 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
   const [releases, setReleases] = useState<ExternalReleaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Default to January 2025 or current view
-  const [currentDate, setCurrentDate] = useState(() => {
-    // If current system date is past 2025, allow user to browse or default to early 2025 / current date
-    const d = new Date();
-    // If year is 2026, default to 2025 to show recent major verified releases like Severance S2
-    if (d.getFullYear() > 2025) {
-      return new Date(2025, 0, 17); // Jan 17, 2025 (Severance S2 Premiere)
-    }
-    return d;
-  });
+  // Default to actual current system date (e.g. September 2026)
+  const [currentDate, setCurrentDate] = useState(() => new Date());
 
   const [activeType, setActiveType] = useState<'all' | 'tv' | 'movie' | 'music'>('all');
   const [minRating, setMinRating] = useState<number>(0);
@@ -76,6 +68,32 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
   const setMonthYear = (newYear: number, newMonth: number) => {
     setCurrentDate(new Date(newYear, newMonth, 1));
   };
+  const resetToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Dynamic presets based on current real-world time
+  const currentSysDate = new Date();
+  const currentSysYear = currentSysDate.getFullYear();
+  const currentSysMonth = currentSysDate.getMonth();
+
+  const presets = [
+    { offset: 0, label: 'This Month' },
+    { offset: 1, label: '+1 Mo' },
+    { offset: 2, label: '+2 Mo' },
+    { offset: 3, label: '+3 Mo' },
+  ].map(p => {
+    const d = new Date(currentSysYear, currentSysMonth + p.offset, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const shortName = monthNames[m].substring(0, 3);
+    const yrShort = String(y).slice(-2);
+    return {
+      year: y,
+      month: m,
+      label: p.offset === 0 ? 'This Month' : `${shortName} '${yrShort}`
+    };
+  });
 
   // Filter releases by media type, rating, and search query
   const filteredReleases = useMemo(() => {
@@ -241,37 +259,26 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
         <div className="flex items-center gap-2">
           {/* Quick Year/Month jump presets */}
           <div className="hidden sm:flex items-center gap-1 text-xs">
+            {presets.map((p) => {
+              const isActive = year === p.year && month === p.month;
+              return (
+                <button
+                  key={`${p.year}-${p.month}`}
+                  onClick={() => setMonthYear(p.year, p.month)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                    isActive ? 'bg-[#a8c7fa] text-[#041e49]' : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
             <button
-              onClick={() => setMonthYear(2025, 0)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                year === 2025 && month === 0 ? 'bg-white/20 text-white' : 'text-[#9aa0a6] hover:text-white'
-              }`}
+              onClick={resetToToday}
+              title="Reset to current month"
+              className="px-2 py-1 rounded-full text-[10px] font-semibold text-[#8e918f] hover:text-white transition-colors cursor-pointer ml-0.5"
             >
-              Jan '25
-            </button>
-            <button
-              onClick={() => setMonthYear(2025, 1)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                year === 2025 && month === 1 ? 'bg-white/20 text-white' : 'text-[#9aa0a6] hover:text-white'
-              }`}
-            >
-              Feb '25
-            </button>
-            <button
-              onClick={() => setMonthYear(2025, 2)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                year === 2025 && month === 2 ? 'bg-white/20 text-white' : 'text-[#9aa0a6] hover:text-white'
-              }`}
-            >
-              Mar '25
-            </button>
-            <button
-              onClick={() => setMonthYear(2025, 3)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                year === 2025 && month === 3 ? 'bg-white/20 text-white' : 'text-[#9aa0a6] hover:text-white'
-              }`}
-            >
-              Apr '25
+              Reset
             </button>
           </div>
 

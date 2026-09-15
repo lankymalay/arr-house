@@ -15,14 +15,30 @@ import { AddContentModal } from './AddContentModal.js';
 interface SearchViewProps {
   onAddedItem: () => void;
   onViewLibraryItem?: (id: string | number) => void;
+  initialQuery?: string;
+  initialService?: 'all' | ServiceId;
 }
 
-export const SearchView: React.FC<SearchViewProps> = ({ onAddedItem }) => {
-  const [query, setQuery] = useState('');
-  const [targetService, setTargetService] = useState<'all' | ServiceId>('all');
+export const SearchView: React.FC<SearchViewProps> = ({ 
+  onAddedItem, 
+  onViewLibraryItem,
+  initialQuery = '',
+  initialService = 'all'
+}) => {
+  const [query, setQuery] = useState(initialQuery);
+  const [targetService, setTargetService] = useState<'all' | ServiceId>(initialService);
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedItemForAdd, setSelectedItemForAdd] = useState<SearchResultItem | null>(null);
+
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery);
+    }
+    if (initialService) {
+      setTargetService(initialService);
+    }
+  }, [initialQuery, initialService]);
 
   const executeSearch = async (searchTerm: string, service: 'all' | ServiceId) => {
     setLoading(true);

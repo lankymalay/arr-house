@@ -16,15 +16,44 @@ import { SettingsView } from './components/SettingsView.js';
 import { ItemDetailModal } from './components/ItemDetailModal.js';
 import { AddContentModal } from './components/AddContentModal.js';
 import { PirateShipIcon } from './components/PirateShipIcon.js';
-import type { MediaItem, QueueItem, CalendarEvent, ProwlarrIndexer, SearchResultItem } from './types.js';
+import type { MediaItem, QueueItem, CalendarEvent, ProwlarrIndexer, SearchResultItem, ServiceId } from './types.js';
+
+const VALID_TABS: NavTab[] = [
+  'dashboard',
+  'libraries',
+  'search',
+  'queue',
+  'calendar',
+  'external_calendar',
+  'settings'
+];
+
+function getTabFromUrl(): NavTab {
+  if (typeof window === 'undefined') return 'dashboard';
+  const raw = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim();
+  if (VALID_TABS.includes(raw as NavTab)) {
+    return raw as NavTab;
+  }
+  return 'dashboard';
+}
+
+function getQueryParam(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash;
+  const qIdx = hash.indexOf('?');
+  if (qIdx === -1) return null;
+  const params = new URLSearchParams(hash.substring(qIdx + 1));
+  return params.get(key);
+}
 
 const MainLayout: React.FC = () => {
   const { user, needsSetup, initialized, loading: authLoading } = useAuth();
   const { info, error } = useToast();
 
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTab>(() => getTabFromUrl());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchPreset, setSearchPreset] = useState<{ query?: string; service?: 'all' | ServiceId } | null>(null);
 
   // App Stack Data
   const [overview, setOverview] = useState<any>(null);
@@ -38,6 +67,89 @@ const MainLayout: React.FC = () => {
   // Modals
   const [selectedMediaItem, setSelectedMediaItem] = useState<MediaItem | null>(null);
   const [addItemData, setAddItemData] = useState<SearchResultItem | null>(null);
+
+  // Unified tab navigation with browser history (PushState & PopState)
+  const navigateToTab = useCallback((tab: NavTab, options?: { replace?: boolean; query?: string; service?: 'all' | ServiceId }) => {
+    setActiveTab(tab);
+    setMobileMenuOpen(false);
+
+    if (options?.query) {
+      setSearchPreset({ query: options.query, service: options.service });
+    }
+
+    const searchPart = options?.query ? `?q=${encodeURIComponent(options.query)}` : '';
+    const targetHash = `#/${tab}${searchPart}`;
+
+    if (window.location.hash !== targetHash) {
+      if (options?.replace) {
+        window.history.replaceState({ tab }, '', targetHash);
+      } else {
+        window.history.pushState({ tab }, '', targetHash);
+      }
+    }
+  }, []);
+
+  // Handle Browser Back and Forward buttons seamlessly
+  useEffect(() => {
+    // Initial hash setup if missing
+    if (!window.location.hash) {
+      const initialTab = getTabFromUrl();
+      window.history.replaceState({ tab: initialTab }, '', `#/${initialTab}`);
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      // If a modal was open when user hit Back, gracefully dismiss the modal
+      if (selectedMediaItem) {
+        setSelectedMediaItem(null);
+        return;
+      }
+      if (addItemData) {
+        setAddItemData(null);
+        return;
+      }
+
+      // Read target tab from browser history state or URL hash
+      const stateTab = event.state?.tab;
+      const urlTab = getTabFromUrl();
+      const targetTab = (stateTab && VALID_TABS.includes(stateTab)) ? stateTab : urlTab;
+
+      setActiveTab(targetTab);
+      setMobileMenuOpen(false);
+
+      const q = getQueryParam('q');
+      if (q && targetTab === 'search') {
+        setSearchPreset({ query: q });
+      }
+    };
+
+    const handleHashChange = () => {
+      const urlTab = getTabFromUrl();
+      setActiveTab(urlTab);
+      const q = getQueryParam('q');
+      if (q && urlTab === 'search') {
+        setSearchPreset({ query: q });
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [selectedMediaItem, addItemData]);
+
+  // Modal open helpers with history push
+  const openMediaItemModal = useCallback((item: MediaItem) => {
+    setSelectedMediaItem(item);
+    window.history.pushState({ tab: activeTab, modal: 'item_detail', id: item.id }, '', window.location.hash);
+  }, [activeTab]);
+
+  const openAddModal = useCallback((item: SearchResultItem) => {
+    setAddItemData(item);
+    window.history.pushState({ tab: activeTab, modal: 'add_item', title: item.title }, '', window.location.hash);
+  }, [activeTab]);
 
   // Safe JSON response parser
   const parseJsonSafe = async (res: Response) => {
@@ -99,7 +211,6 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchAllData();
-      // Optional polling every 45s
       const interval = setInterval(fetchAllData, 45000);
       return () => clearInterval(interval);
     }
@@ -110,12 +221,12 @@ const MainLayout: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setActiveTab('search');
+        navigateToTab('search');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [navigateToTab]);
 
   if (authLoading) {
     return (
@@ -147,14 +258,8 @@ const MainLayout: React.FC = () => {
       <Sidebar
         activeTab={activeTab}
         currentTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          setMobileMenuOpen(false);
-        }}
-        onSelectTab={(tab) => {
-          setActiveTab(tab);
-          setMobileMenuOpen(false);
-        }}
+        onTabChange={(tab) => navigateToTab(tab)}
+        onSelectTab={(tab) => navigateToTab(tab)}
         queueCount={queue.length}
         waitlistCount={waitlistItems.length}
         collapsed={sidebarCollapsed}
@@ -170,7 +275,7 @@ const MainLayout: React.FC = () => {
           activeTab={activeTab}
           currentTab={activeTab}
           queueCount={queue.length}
-          onOpenSearch={() => setActiveTab('search')}
+          onOpenSearch={() => navigateToTab('search')}
           onRefresh={fetchAllData}
           onRefreshData={fetchAllData}
           refreshing={refreshing}
@@ -186,16 +291,16 @@ const MainLayout: React.FC = () => {
               queue={queue}
               calendar={calendarEvents}
               indexers={indexers}
-              onNavigate={(tab) => setActiveTab(tab)}
-              onOpenAddModal={() => setActiveTab('search')}
+              onNavigate={(tab) => navigateToTab(tab)}
+              onOpenAddModal={() => navigateToTab('search')}
             />
           )}
 
           {activeTab === 'libraries' && (
             <LibrariesView
               items={mediaItems}
-              onSelectItem={(item) => setSelectedMediaItem(item)}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onSelectItem={(item) => openMediaItemModal(item)}
+              onNavigate={(tab) => navigateToTab(tab)}
             />
           )}
 
@@ -205,7 +310,7 @@ const MainLayout: React.FC = () => {
               waitlist={waitlistItems}
               indexers={indexers}
               onRefresh={fetchAllData}
-              onSelectItem={(item) => setSelectedMediaItem(item)}
+              onSelectItem={(item) => openMediaItemModal(item)}
             />
           )}
 
@@ -214,8 +319,10 @@ const MainLayout: React.FC = () => {
               onAddedItem={() => fetchAllData()}
               onViewLibraryItem={(id) => {
                 const found = mediaItems.find((m) => m.id === id);
-                if (found) setSelectedMediaItem(found);
+                if (found) openMediaItemModal(found);
               }}
+              initialQuery={searchPreset?.query || ''}
+              initialService={searchPreset?.service || 'all'}
             />
           )}
 
@@ -228,8 +335,15 @@ const MainLayout: React.FC = () => {
 
           {activeTab === 'external_calendar' && (
             <ExternalCalendarView
-              onSearchItem={(query) => {
-                setActiveTab('search');
+              onSearchItem={(query, mediaType) => {
+                const service: 'all' | ServiceId = mediaType === 'tv' 
+                  ? 'sonarr' 
+                  : mediaType === 'movie' 
+                    ? 'radarr' 
+                    : mediaType === 'music' 
+                      ? 'lidarr' 
+                      : 'all';
+                navigateToTab('search', { query, service });
               }}
             />
           )}
