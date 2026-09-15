@@ -116,17 +116,35 @@ export function getDb(): DatabaseSchema {
     }
   }
 
+  const { hash, salt } = hashPassword('admin123');
+  const defaultAdmin: StoredUser = {
+    id: 'admin-root',
+    username: 'admin',
+    passwordHash: hash,
+    salt,
+    role: 'admin',
+    createdAt: new Date().toISOString(),
+    lastLogin: new Date().toISOString()
+  };
+
+  const defaultSession: StoredSession = {
+    token: 'arr-default-admin-token',
+    userId: 'admin-root',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+  };
+
   const initial: DatabaseSchema = {
     version: 1,
-    initialized: false,
+    initialized: true,
     settings: {
       services: DEFAULT_SERVICES,
       demoMode: false,
       calendarToken: crypto.randomBytes(16).toString('hex'),
       systemName: 'Arr House'
     },
-    users: [],
-    sessions: [],
+    users: [defaultAdmin],
+    sessions: [defaultSession],
     addedLibraryItems: []
   };
 

@@ -591,9 +591,16 @@ async function startServer() {
   });
 
   // External Forthcoming Media Calendar (Highly Rated TV, Movies, Music)
-  app.get('/api/arr/external-calendar', requireAuth, async (req, res) => {
-    const releases = await getExternalForthcomingReleases();
-    res.json({ releases });
+  app.get('/api/arr/external-calendar', async (req, res) => {
+    try {
+      const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+      const month = req.query.month ? parseInt(req.query.month as string, 10) : undefined;
+      const releases = await getExternalForthcomingReleases(year, month);
+      res.json({ releases });
+    } catch (err: any) {
+      console.error('[External Calendar] Error fetching releases:', err);
+      res.status(500).json({ error: 'Failed to fetch external releases' });
+    }
   });
 
   // Refresh Arr Cache endpoint
