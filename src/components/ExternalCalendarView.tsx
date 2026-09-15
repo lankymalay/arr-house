@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Globe, 
   ChevronLeft, 
   ChevronRight, 
   Tv, 
@@ -8,15 +7,10 @@ import {
   Music, 
   Star, 
   Search, 
-  Plus, 
-  ExternalLink,
   Calendar as CalendarIcon,
-  Sparkles,
-  Loader2,
-  Filter
+  Loader2
 } from 'lucide-react';
 import type { ExternalReleaseItem } from '../types.js';
-import { useAuth } from '../context/AuthContext.js';
 import { useToast } from '../context/ToastContext.js';
 
 interface ExternalCalendarViewProps {
@@ -24,19 +18,19 @@ interface ExternalCalendarViewProps {
 }
 
 export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSearchItem }) => {
-  const { token } = useAuth();
   const { success, error: toastError } = useToast();
   const [releases, setReleases] = useState<ExternalReleaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeType, setActiveType] = useState<'all' | 'tv' | 'movie' | 'music'>('all');
-  const [minRating, setMinRating] = useState<number>(8.0);
+  const [minRating, setMinRating] = useState<number>(0);
   const [selectedItem, setSelectedItem] = useState<ExternalReleaseItem | null>(null);
 
   useEffect(() => {
     async function loadExternalCalendar() {
       setLoading(true);
       try {
+        const token = localStorage.getItem('arr_token');
         const res = await fetch('/api/arr/external-calendar', {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
@@ -54,7 +48,7 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
     }
 
     loadExternalCalendar();
-  }, [token]);
+  }, []);
 
   // Calendar math
   const year = currentDate.getFullYear();
@@ -121,15 +115,11 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-2">
-            <Globe className="w-3.5 h-3.5" />
-            Global Forthcoming Releases
-          </div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
             External Release Calendar
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl">
-            Forthcoming highly rated TV shows, anticipated cinematic movies, and acclaimed music drops. Spot future releases and add them to your *arr monitoring queue with one click.
+            Forthcoming TV shows, anticipated movies, and acclaimed music drops. Spot future releases and add them to your *arr monitoring queue with one click.
           </p>
         </div>
 
@@ -180,6 +170,8 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
               onChange={(e) => setMinRating(Number(e.target.value))}
               className="bg-transparent text-amber-300 font-bold focus:outline-none cursor-pointer text-xs"
             >
+              <option value={0} className="bg-slate-900 text-white">All Ratings</option>
+              <option value={7.0} className="bg-slate-900 text-white">★ 7.0+</option>
               <option value={7.5} className="bg-slate-900 text-white">★ 7.5+</option>
               <option value={8.0} className="bg-slate-900 text-white">★ 8.0+ (Highly Rated)</option>
               <option value={8.5} className="bg-slate-900 text-white">★ 8.5+ (Critically Acclaimed)</option>
@@ -296,12 +288,12 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
                           key={item.id}
                           onClick={() => setSelectedItem(item)}
                           className={`w-full text-left p-1 rounded-md text-[10px] font-medium border truncate block transition-all hover:scale-[1.02] cursor-pointer ${badge.bg}`}
-                          title={`${item.seriesOrArtistTitle || ''} ${item.title} (★ ${item.rating})`}
+                          title={`${item.title} (★ ${item.rating})`}
                         >
                           <div className="flex items-center gap-1 truncate">
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${badge.dot}`} />
                             <span className="font-semibold truncate">
-                              {item.seriesOrArtistTitle ? `${item.seriesOrArtistTitle}: ` : ''}{item.title}
+                              {item.title}
                             </span>
                             <span className="ml-auto text-[9px] text-amber-300 font-bold shrink-0">
                               ★{item.rating}
@@ -336,11 +328,8 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
                     {getTypeBadge(selectedItem.mediaType).label}
                   </span>
                   <h3 className="text-xl font-extrabold text-white leading-tight">
-                    {selectedItem.seriesOrArtistTitle || selectedItem.title}
+                    {selectedItem.title}
                   </h3>
-                  {selectedItem.seriesOrArtistTitle && (
-                    <p className="text-xs text-indigo-300 font-medium">{selectedItem.title}</p>
-                  )}
                 </div>
                 <div className="bg-slate-900/90 border border-slate-700/80 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
                   <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
@@ -377,7 +366,7 @@ export const ExternalCalendarView: React.FC<ExternalCalendarViewProps> = ({ onSe
                 {onSearchItem && (
                   <button
                     onClick={() => {
-                      const query = selectedItem.seriesOrArtistTitle || selectedItem.title;
+                      const query = selectedItem.seriesOrArtistTitle || selectedItem.title.replace(/\s+S\d+E\d+$/i, '');
                       onSearchItem(query, selectedItem.mediaType);
                       setSelectedItem(null);
                     }}

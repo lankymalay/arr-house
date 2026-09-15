@@ -331,9 +331,8 @@ async function startServer() {
     if (typeof demoMode === 'boolean') {
       db.settings.demoMode = demoMode;
     }
-    if (systemName) {
-      db.settings.systemName = systemName.trim();
-    }
+    // Dashboard title is locked to Arr House with no option to change
+    db.settings.systemName = 'Arr House';
 
     if (services && typeof services === 'object') {
       for (const [id, updatedSvc] of Object.entries(services as Record<ServiceId, any>)) {

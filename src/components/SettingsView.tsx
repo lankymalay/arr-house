@@ -388,24 +388,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack }) =>
                 </button>
               );
             })}
-
-            {/* General App Settings */}
-            <div className="mt-6 p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-3">
-              <span className="text-xs font-bold text-white block">General Settings</span>
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  Dashboard Title
-                </label>
-                <input
-                  id="settings-system-name"
-                  type="text"
-                  value={systemName}
-                  onChange={(e) => setSystemName(e.target.value)}
-                  placeholder="Arr House"
-                  className="w-full px-3 py-1.5 bg-slate-950/80 border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Service Configuration Form */}
