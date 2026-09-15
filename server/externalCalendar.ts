@@ -514,3 +514,152 @@ export async function getExternalForthcomingReleases(
   monthCache.set(cacheKey, { timestamp: Date.now(), items });
   return items;
 }
+
+export interface ForthcomingReleasesPayload {
+  generatedAt: string;
+  timeframe: {
+    startDate: string;
+    endDate: string;
+    months: { key: string; label: string; year: number; month: number }[];
+  };
+  counts: {
+    total: number;
+    tv: number;
+    movie: number;
+    music: number;
+  };
+  spotlight: ExternalReleaseItem[];
+  topTv: ExternalReleaseItem[];
+  topMovies: ExternalReleaseItem[];
+  topMusic: ExternalReleaseItem[];
+  all: ExternalReleaseItem[];
+}
+
+let threeMonthsCache: { timestamp: number; data: ForthcomingReleasesPayload } | null = null;
+const THREE_MONTHS_CACHE_TTL = 1000 * 60 * 15; // 15 minutes
+
+export async function getTopReleasesNextThreeMonths(): Promise<ForthcomingReleasesPayload> {
+  const now = new Date();
+  if (threeMonthsCache && (now.getTime() - threeMonthsCache.timestamp < THREE_MONTHS_CACHE_TTL)) {
+    return threeMonthsCache.data;
+  }
+
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+  const todayStr = now.toISOString().split('T')[0];
+
+  // Calculate 90 days in the future
+  const endDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const endDateStr = endDate.toISOString().split('T')[0];
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  // The 3-4 months spanning the next three months
+  const monthsToFetch: { key: string; label: string; year: number; month: number }[] = [];
+  for (let offset = 0; offset < 4; offset++) {
+    const d = new Date(curYear, curMonth - 1 + offset, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const key = `${y}-${String(m).padStart(2, '0')}`;
+    const label = `${monthNames[m - 1]} ${y}`;
+    if (!monthsToFetch.some(item => item.key === key)) {
+      monthsToFetch.push({ key, label, year: y, month: m });
+    }
+  }
+
+  // Fetch releases for these months in parallel
+  const monthlyResults = await Promise.all(
+    monthsToFetch.map(m => getExternalForthcomingReleases(m.year, m.month))
+  );
+
+  const flatItems = monthlyResults.flat();
+  const seenIds = new Set<string>();
+  const validUpcoming: ExternalReleaseItem[] = [];
+
+  for (const item of flatItems) {
+    if (seenIds.has(item.id)) continue;
+    seenIds.add(item.id);
+
+    // Keep items from today onwards up to 90+ days
+    if (item.date >= todayStr && item.date <= endDateStr) {
+      validUpcoming.push(item);
+    }
+  }
+
+  // Separate by media type
+  const allMovies = validUpcoming
+    .filter(i => i.mediaType === 'movie')
+    .sort((a, b) => b.popularityScore - a.popularityScore || b.rating - a.rating || a.date.localeCompare(b.date));
+
+  const allTv = validUpcoming
+    .filter(i => i.mediaType === 'tv')
+    .sort((a, b) => b.popularityScore - a.popularityScore || b.rating - a.rating || a.date.localeCompare(b.date));
+
+  const allMusic = validUpcoming
+    .filter(i => i.mediaType === 'music')
+    .sort((a, b) => b.popularityScore - a.popularityScore || b.rating - a.rating || a.date.localeCompare(b.date));
+
+  // Top spotlight items across all types (highest score/rating, tentpole releases)
+  const spotlightCandidates = [...validUpcoming].sort((a, b) => {
+    // Prefer items with high score or rating >= 8.5
+    if (b.popularityScore !== a.popularityScore) {
+      return b.popularityScore - a.popularityScore;
+    }
+    return b.rating - a.rating;
+  });
+
+  // Ensure spotlight has a healthy mix of top movies and top TV series/premieres
+  const spotlight: ExternalReleaseItem[] = [];
+  const spotlightSeenShow = new Set<string>();
+
+  // Add top movies first (up to 4)
+  for (const m of allMovies) {
+    if (spotlight.length >= 4) break;
+    spotlight.push(m);
+    spotlightSeenShow.add(m.title.toLowerCase());
+  }
+
+  // Add top TV shows (up to 4, distinct shows)
+  for (const t of allTv) {
+    if (spotlight.length >= 8) break;
+    const showKey = (t.seriesOrArtistTitle || t.title).toLowerCase();
+    if (!spotlightSeenShow.has(showKey)) {
+      spotlightSeenShow.add(showKey);
+      spotlight.push(t);
+    }
+  }
+
+  // If still room, add top album
+  if (spotlight.length < 8 && allMusic.length > 0) {
+    spotlight.push(allMusic[0]);
+  }
+
+  // Chronological sort for the main feed
+  const allChronological = [...validUpcoming].sort((a, b) => a.date.localeCompare(b.date));
+
+  const payload: ForthcomingReleasesPayload = {
+    generatedAt: new Date().toISOString(),
+    timeframe: {
+      startDate: todayStr,
+      endDate: endDateStr,
+      months: monthsToFetch.slice(0, 3) // primary 3 months
+    },
+    counts: {
+      total: validUpcoming.length,
+      tv: allTv.length,
+      movie: allMovies.length,
+      music: allMusic.length
+    },
+    spotlight,
+    topTv: allTv.slice(0, 40),
+    topMovies: allMovies.slice(0, 40),
+    topMusic: allMusic.slice(0, 40),
+    all: allChronological
+  };
+
+  threeMonthsCache = { timestamp: now.getTime(), data: payload };
+  return payload;
+}

@@ -7,7 +7,8 @@ import {
   Plus, 
   Check, 
   Loader2,
-  Layers
+  Layers,
+  SlidersHorizontal
 } from 'lucide-react';
 import type { SearchResultItem, ServiceId } from '../types.js';
 import { AddContentModal } from './AddContentModal.js';
@@ -194,14 +195,25 @@ export const SearchView: React.FC<SearchViewProps> = ({
               result.service === 'lidarr' ? 'bg-[#b4e3be] text-[#072711]' :
               'bg-white/10 text-white';
 
+            const isTvShow = result.service === 'sonarr' || result.mediaType === 'tv';
+
             return (
               <div
                 key={`${result.service}-${result.foreignId}`}
                 id={`search-card-${result.foreignId}`}
-                className="sonos-card p-4 flex gap-4 hover:bg-[#181c25] transition-all group"
+                onClick={() => {
+                  if (!result.alreadyInLibrary) {
+                    setSelectedItemForAdd(result);
+                  } else if (result.existingId && onViewLibraryItem) {
+                    onViewLibraryItem(result.existingId);
+                  }
+                }}
+                className={`sonos-card p-4 flex gap-4 hover:bg-[#181c25] transition-all group ${
+                  !result.alreadyInLibrary ? 'cursor-pointer hover:border-white/20' : ''
+                }`}
               >
                 {/* Poster Thumbnail */}
-                <div className="w-24 h-36 rounded-2xl bg-[#0c0e12] overflow-hidden shrink-0 border border-white/[0.08] relative">
+                <div className="w-24 h-36 rounded-2xl bg-[#0c0e12] overflow-hidden shrink-0 border border-white/[0.08] relative shadow-sm">
                   {result.posterUrl ? (
                     <img
                       src={result.posterUrl}
@@ -212,6 +224,11 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[#5f6368] text-xs">
                       No Poster
+                    </div>
+                  )}
+                  {isTvShow && !result.alreadyInLibrary && (
+                    <div className="absolute inset-x-0 bottom-0 bg-black/80 backdrop-blur-xs py-1 px-1.5 text-[9px] font-bold text-center text-[#a8c7fa] border-t border-white/10 opacity-90 group-hover:opacity-100 transition-opacity">
+                      Select Episodes
                     </div>
                   )}
                 </div>
@@ -226,9 +243,14 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       {result.year && (
                         <span className="text-xs text-[#9aa0a6] font-mono">{result.year}</span>
                       )}
+                      {isTvShow && (
+                        <span className="text-[10px] text-[#a8c7fa] bg-[#a8c7fa]/10 px-2 py-0.5 rounded-full border border-[#a8c7fa]/20 font-medium">
+                          Whole show, seasons, or individual episodes
+                        </span>
+                      )}
                     </div>
 
-                    <h4 className="text-sm font-extrabold text-white line-clamp-1 tracking-tight">
+                    <h4 className="text-sm font-extrabold text-white line-clamp-1 tracking-tight group-hover:text-white transition-colors">
                       {result.title}
                     </h4>
 
@@ -253,7 +275,15 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     )}
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-end">
+                  <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between">
+                    <div className="text-[11px] text-[#9aa0a6] hidden sm:block">
+                      {isTvShow && !result.alreadyInLibrary ? (
+                        <span className="text-[#a8c7fa] hover:underline">
+                          Click card to choose episodes
+                        </span>
+                      ) : null}
+                    </div>
+
                     {result.alreadyInLibrary ? (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#b4e3be]/15 text-[#b4e3be] text-xs font-bold border border-[#b4e3be]/20">
                         <Check className="w-3.5 h-3.5" />
@@ -262,11 +292,28 @@ export const SearchView: React.FC<SearchViewProps> = ({
                     ) : (
                       <button
                         id={`btn-add-${result.foreignId}`}
-                        onClick={() => setSelectedItemForAdd(result)}
-                        className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer pixel-pill"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedItemForAdd(result);
+                        }}
+                        className={`px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer pixel-pill ${
+                          isTvShow
+                            ? 'bg-[#a8c7fa] text-[#041e49] hover:bg-[#8ab4f8]'
+                            : 'bg-white text-black hover:bg-neutral-200'
+                        }`}
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Title</span>
+                        {isTvShow ? (
+                          <>
+                            <SlidersHorizontal className="w-3.5 h-3.5" />
+                            <span>Select & Add</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add Title</span>
+                          </>
+                        )}
                       </button>
                     )}
                   </div>

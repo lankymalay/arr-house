@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Search, 
@@ -8,9 +8,13 @@ import {
   HardDrive, 
   Folder, 
   Bookmark, 
-  BookmarkCheck
+  BookmarkCheck,
+  ChevronDown,
+  ChevronRight,
+  Tv,
+  Check
 } from 'lucide-react';
-import type { MediaItem } from '../types.js';
+import type { MediaItem, TvShowDetails } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 
 interface ItemDetailModalProps {
@@ -22,6 +26,31 @@ interface ItemDetailModalProps {
 export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose, onRefreshItem }) => {
   const { success, info } = useToast();
   const [monitored, setMonitored] = useState(item?.monitored ?? true);
+  const [tvDetails, setTvDetails] = useState<TvShowDetails | null>(null);
+  const [expandedSeasons, setExpandedSeasons] = useState<Set<number>>(new Set([1]));
+
+  const isTvShow = item?.service === 'sonarr' || item?.mediaType === 'tv';
+
+  useEffect(() => {
+    if (!item || !isTvShow) return;
+
+    const fetchTv = async () => {
+      try {
+        const token = localStorage.getItem('arr_token');
+        const res = await fetch(`/api/arr/series/details?title=${encodeURIComponent(item.title)}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTvDetails(data);
+        }
+      } catch (e) {
+        console.warn('Could not fetch TV details for library item', e);
+      }
+    };
+
+    fetchTv();
+  }, [item, isTvShow]);
 
   if (!item) return null;
 
@@ -190,6 +219,68 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
                   {g}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* TV Seasons & Episodes Guide */}
+          {isTvShow && tvDetails && (
+            <div className="pt-3 border-t border-white/[0.06] space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6] flex items-center gap-1.5">
+                  <Tv className="w-3.5 h-3.5 text-[#a8c7fa]" />
+                  <span>Seasons & Episodes Guide ({tvDetails.totalSeasons} Seasons • {tvDetails.totalEpisodes} Episodes)</span>
+                </h4>
+              </div>
+
+              <div className="space-y-2">
+                {tvDetails.seasons.map((season) => {
+                  const isExpanded = expandedSeasons.has(season.seasonNumber);
+                  return (
+                    <div key={season.seasonNumber} className="bg-[#1a1e28] rounded-2xl border border-white/[0.06] overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = new Set(expandedSeasons);
+                          if (next.has(season.seasonNumber)) {
+                            next.delete(season.seasonNumber);
+                          } else {
+                            next.add(season.seasonNumber);
+                          }
+                          setExpandedSeasons(next);
+                        }}
+                        className="w-full p-3 px-4 flex items-center justify-between text-left hover:bg-white/[0.03] transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{season.title}</span>
+                          <span className="text-[11px] text-[#9aa0a6] font-mono">({season.episodeCount} eps)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-[#9aa0a6]">
+                          <span className="text-[11px]">View Episodes</span>
+                          {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-white/[0.06] p-2 space-y-1 bg-[#14171f]/60 max-h-48 overflow-y-auto">
+                          {season.episodes.map((ep) => (
+                            <div key={ep.id} className="p-2 px-3 rounded-xl flex items-center justify-between gap-3 text-xs hover:bg-white/[0.03]">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono text-[10px] font-bold text-[#a8c7fa] bg-[#a8c7fa]/10 px-1.5 py-0.5 rounded shrink-0">
+                                  E{ep.episodeNumber < 10 ? `0${ep.episodeNumber}` : ep.episodeNumber}
+                                </span>
+                                <span className="truncate text-white font-medium">{ep.title}</span>
+                              </div>
+                              {ep.airDate && (
+                                <span className="text-[10px] text-[#5f6368] font-mono shrink-0">{ep.airDate}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

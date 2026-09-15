@@ -26,7 +26,8 @@ import {
   invalidateArrCache
 } from './server/arrProxy.js';
 import { generateICalFeed } from './server/ical.js';
-import { getExternalForthcomingReleases } from './server/externalCalendar.js';
+import { getExternalForthcomingReleases, getTopReleasesNextThreeMonths } from './server/externalCalendar.js';
+import { getTvShowDetails } from './server/tvDetails.js';
 import type { ServiceId, UserRole } from './src/types.js';
 
 async function startServer() {
@@ -533,6 +534,21 @@ async function startServer() {
     res.json({ results });
   });
 
+  // TV Show Season and Episode Breakdown
+  app.get('/api/arr/series/details', requireAuth, async (req, res) => {
+    const title = (req.query.title as string) || '';
+    const foreignId = req.query.foreignId as string | undefined;
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    try {
+      const details = await getTvShowDetails(title, foreignId);
+      res.json(details);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch TV show details' });
+    }
+  });
+
   // Add & Search Content
   app.post('/api/arr/add', requireAuth, async (req, res) => {
     const user = (req as any).user;
@@ -590,7 +606,7 @@ async function startServer() {
     res.json({ events });
   });
 
-  // External Forthcoming Media Calendar (Highly Rated TV, Movies, Music)
+  // External Forthcoming Media Calendar & Window
   app.get('/api/arr/external-calendar', async (req, res) => {
     try {
       const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
@@ -600,6 +616,17 @@ async function startServer() {
     } catch (err: any) {
       console.error('[External Calendar] Error fetching releases:', err);
       res.status(500).json({ error: 'Failed to fetch external releases' });
+    }
+  });
+
+  // Top Forthcoming Releases for the Next Three Months (TV, Movies, Music)
+  app.get('/api/arr/forthcoming', async (req, res) => {
+    try {
+      const data = await getTopReleasesNextThreeMonths();
+      res.json(data);
+    } catch (err: any) {
+      console.error('[Forthcoming Releases] Error fetching next 3 months:', err);
+      res.status(500).json({ error: 'Failed to fetch forthcoming releases' });
     }
   });
 

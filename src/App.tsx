@@ -11,7 +11,7 @@ import { LibrariesView } from './components/LibrariesView.js';
 import { QueueWaitlistView } from './components/QueueWaitlistView.js';
 import { SearchView } from './components/SearchView.js';
 import { CalendarView } from './components/CalendarView.js';
-import { ExternalCalendarView } from './components/ExternalCalendarView.js';
+import { ForthcomingReleasesView } from './components/ForthcomingReleasesView.js';
 import { SettingsView } from './components/SettingsView.js';
 import { ItemDetailModal } from './components/ItemDetailModal.js';
 import { AddContentModal } from './components/AddContentModal.js';
@@ -31,6 +31,9 @@ const VALID_TABS: NavTab[] = [
 function getTabFromUrl(): NavTab {
   if (typeof window === 'undefined') return 'dashboard';
   const raw = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim();
+  if (raw === 'forthcoming' || raw === 'forthcoming-releases' || raw === 'forthcoming_releases') {
+    return 'external_calendar';
+  }
   if (VALID_TABS.includes(raw as NavTab)) {
     return raw as NavTab;
   }
@@ -253,7 +256,7 @@ const MainLayout: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-cyan-500 selection:text-slate-950">
+    <div className="min-h-screen bg-[#0f121a] text-white flex flex-col md:flex-row antialiased selection:bg-[#8ab4f8] selection:text-[#041e49]">
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -334,7 +337,7 @@ const MainLayout: React.FC = () => {
           )}
 
           {activeTab === 'external_calendar' && (
-            <ExternalCalendarView
+            <ForthcomingReleasesView
               onSearchItem={(query, mediaType) => {
                 const service: 'all' | ServiceId = mediaType === 'tv' 
                   ? 'sonarr' 

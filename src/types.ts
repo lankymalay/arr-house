@@ -155,6 +155,36 @@ export interface SearchResultItem {
   albumCount?: number;
 }
 
+export interface TvEpisodeItem {
+  id: string | number;
+  seasonNumber: number;
+  episodeNumber: number;
+  title: string;
+  airDate?: string;
+  overview?: string;
+  monitored?: boolean;
+}
+
+export interface TvSeasonItem {
+  seasonNumber: number;
+  title: string;
+  episodeCount: number;
+  monitored: boolean;
+  episodes: TvEpisodeItem[];
+}
+
+export interface TvShowDetails {
+  title: string;
+  year?: number;
+  overview?: string;
+  posterUrl?: string;
+  network?: string;
+  genres?: string[];
+  totalSeasons: number;
+  totalEpisodes: number;
+  seasons: TvSeasonItem[];
+}
+
 export interface AddContentPayload {
   service: ServiceId;
   title: string;
@@ -164,4 +194,7 @@ export interface AddContentPayload {
   monitored: boolean;
   searchForMissing: boolean;
   metadata?: any;
+  monitorScope?: 'all' | 'specific_seasons' | 'specific_episodes';
+  selectedSeasons?: number[];
+  selectedEpisodes?: { season: number; episode: number }[];
 }

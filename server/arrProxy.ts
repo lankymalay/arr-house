@@ -672,13 +672,23 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
         };
       } else if (payload.service === 'sonarr') {
         endpoint = '/api/v3/series';
+        let seasonsArr: any[] | undefined = undefined;
+        if (payload.selectedSeasons && payload.selectedSeasons.length > 0) {
+          seasonsArr = payload.selectedSeasons.map((sn) => ({
+            seasonNumber: sn,
+            monitored: true
+          }));
+        }
+
         body = {
           title: payload.title,
           qualityProfileId: payload.qualityProfileId,
           rootFolderPath: payload.rootFolderPath,
           monitored: payload.monitored,
           tvdbId: payload.foreignId ? Number(payload.foreignId) : undefined,
+          seasons: seasonsArr,
           addOptions: {
+            monitor: payload.monitorScope === 'all' ? 'all' : 'none',
             searchForMissingEpisodes: !!payload.searchForMissing
           }
         };
@@ -737,7 +747,9 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
     path: `${payload.rootFolderPath}/${payload.title.replace(/[^a-zA-Z0-9_-]/g, ' ')}`,
     added: new Date().toISOString(),
     sizeBytes: 0,
-    genres: payload.metadata?.genres || []
+    genres: payload.metadata?.genres || [],
+    episodeCount: payload.selectedEpisodes ? payload.selectedEpisodes.length : (payload.service === 'sonarr' ? 10 : undefined),
+    seasonCount: payload.selectedSeasons ? payload.selectedSeasons.length : (payload.service === 'sonarr' ? 1 : undefined)
   };
 
   db.addedLibraryItems = db.addedLibraryItems || [];
