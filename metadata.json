@@ -1,0 +1,6 @@
+{
+  "name": "Arr House",
+  "description": "Unified dashboard to manage personal *arr stacks (Sonarr, Radarr, Lidarr, and Prowlarr) with universal search, release calendar, and queue monitor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

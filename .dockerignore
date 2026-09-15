@@ -1,0 +1,8 @@
+node_modules
+dist
+data/*.json
+.git
+.gitignore
+.env
+bun.lock
+README.md
