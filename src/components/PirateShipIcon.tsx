@@ -18,34 +18,34 @@ export const PirateShipIcon: React.FC<PirateShipIconProps> = ({
       aria-hidden="true"
     >
       <defs>
-        {/* Background Badge Gradient */}
+        {/* Background Badge Gradient - Rich, Clean, Deep Obsidian */}
         <linearGradient id="tvStackBg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#161e2e" />
-          <stop offset="100%" stopColor="#0a0e16" />
+          <stop offset="0%" stopColor="#111726" />
+          <stop offset="100%" stopColor="#080c14" />
         </linearGradient>
 
-        {/* 1. Sonarr Cyan Gradient */}
+        {/* 1. Sonarr - Clear Vibrant Electric Cyan */}
         <linearGradient id="sonarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#0284c7" />
+          <stop offset="0%" stopColor="#00d2ff" />
+          <stop offset="100%" stopColor="#0099ff" />
         </linearGradient>
 
-        {/* 2. Radarr Yellow Gradient */}
+        {/* 2. Radarr - Clear Vibrant Warm Amber Gold */}
         <linearGradient id="radarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#fde047" />
-          <stop offset="100%" stopColor="#eab308" />
+          <stop offset="0%" stopColor="#ffc107" />
+          <stop offset="100%" stopColor="#ff9800" />
         </linearGradient>
 
-        {/* 3. Lidarr Green Gradient */}
+        {/* 3. Lidarr - Clear Vibrant Vivid Emerald Green */}
         <linearGradient id="lidarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#4ade80" />
-          <stop offset="100%" stopColor="#16a34a" />
+          <stop offset="0%" stopColor="#10e070" />
+          <stop offset="100%" stopColor="#059669" />
         </linearGradient>
 
-        {/* 4. Prowlarr Orange Gradient */}
+        {/* 4. Prowlarr - Clear Vibrant Deep Coral Orange */}
         <linearGradient id="prowlarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#fb923c" />
-          <stop offset="100%" stopColor="#ea580c" />
+          <stop offset="0%" stopColor="#ff6b35" />
+          <stop offset="100%" stopColor="#e63946" />
         </linearGradient>
       </defs>
 
@@ -59,50 +59,54 @@ export const PirateShipIcon: React.FC<PirateShipIconProps> = ({
             x="1"
             y="1"
             rx="15"
-            stroke="#263347"
+            stroke="#2e3b52"
             strokeWidth="1.2"
             fill="none"
           />
         </>
       )}
 
-      {/* TV Aerial Antenna (Compact Rabbit Ears - Square Aspect Ratio) */}
+      {/* TV Aerial Antenna (High Contrast Silver & Pure White Tips) */}
       <line
         x1="32"
         y1="19.5"
         x2="25"
-        y2="15.5"
-        stroke="#94a3b8"
-        strokeWidth="1.8"
+        y2="15.2"
+        stroke="#f8fafc"
+        strokeWidth="2"
         strokeLinecap="round"
       />
-      <circle cx="25" cy="15.5" r="1.5" fill="#e2e8f0" />
+      <circle cx="25" cy="15.2" r="1.6" fill="#ffffff" />
 
       <line
         x1="32"
         y1="19.5"
         x2="39"
-        y2="15.5"
-        stroke="#94a3b8"
-        strokeWidth="1.8"
+        y2="15.2"
+        stroke="#f8fafc"
+        strokeWidth="2"
         strokeLinecap="round"
       />
-      <circle cx="39" cy="15.5" r="1.5" fill="#e2e8f0" />
+      <circle cx="39" cy="15.2" r="1.6" fill="#ffffff" />
 
-      <circle cx="32" cy="19.5" r="1.6" fill="#475569" />
+      <circle cx="32" cy="19.5" r="1.8" fill="#94a3b8" />
 
-      {/* Four Stacked Service Blocks (Mathematically Square 36x36 Bounding Box) */}
+      {/* Four Stacked Service Blocks (Clear, Vibrant, High-Contrast 36x36 Composition) */}
       {/* 1. Sonarr (Cyan - TV) */}
       <rect x="14" y="19.7" width="36" height="6.6" rx="2" fill="url(#sonarrGrad)" />
+      <line x1="16" y1="20.5" x2="48" y2="20.5" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
 
-      {/* 2. Radarr (Yellow - Movies) */}
+      {/* 2. Radarr (Amber Gold - Movies) */}
       <rect x="14" y="27.6" width="36" height="6.6" rx="2" fill="url(#radarrGrad)" />
+      <line x1="16" y1="28.4" x2="48" y2="28.4" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
 
-      {/* 3. Lidarr (Green - Music) */}
+      {/* 3. Lidarr (Emerald Green - Music) */}
       <rect x="14" y="35.5" width="36" height="6.6" rx="2" fill="url(#lidarrGrad)" />
+      <line x1="16" y1="36.3" x2="48" y2="36.3" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
 
-      {/* 4. Prowlarr (Orange - Indexers) */}
+      {/* 4. Prowlarr (Deep Coral Orange - Indexers) */}
       <rect x="14" y="43.4" width="36" height="6.6" rx="2" fill="url(#prowlarrGrad)" />
+      <line x1="16" y1="44.2" x2="48" y2="44.2" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
     </svg>
   );
 };

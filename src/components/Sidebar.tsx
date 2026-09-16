@@ -68,17 +68,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {!collapsed ? (
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="shrink-0">
-                <PirateShipIcon className="w-9 h-9 rounded-2xl shadow-md shadow-black/50 ring-1 ring-[#3b455b]" withBadge />
+                <PirateShipIcon className="w-9 h-9 rounded-2xl shadow-md shadow-black/50 ring-1 ring-[#2d3c54]" withBadge />
               </div>
               <div className="truncate min-w-0">
-                <span className="font-extrabold text-[15px] text-white tracking-tight block truncate font-sans">
+                <span className="font-semibold text-[15px] text-white tracking-tight block truncate font-sans">
                   {systemName}
                 </span>
               </div>
             </div>
           ) : (
             <div className="mx-auto">
-              <PirateShipIcon className="w-9 h-9 rounded-2xl ring-1 ring-[#3b455b] shadow-md shadow-black/50" withBadge />
+              <PirateShipIcon className="w-9 h-9 rounded-2xl ring-1 ring-[#2d3c54] shadow-md shadow-black/50" withBadge />
             </div>
           )}
 
@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             id="sidebar-toggle-btn"
             onClick={onToggleCollapse}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="text-[#cbd5e1] hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors hidden md:flex items-center justify-center cursor-pointer pixel-pill"
+            className="text-slate-200 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors hidden md:flex items-center justify-center cursor-pointer pixel-pill"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -106,10 +106,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full font-semibold text-sm transition-all duration-200 relative cursor-pointer pixel-pill ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-950/40 border border-indigo-400/40'
-                    : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
+                    : 'text-slate-200 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-300'}`} />
                 {!collapsed && (
                   <span className="truncate flex-1 text-left tracking-tight">
                     {item.label}
@@ -119,13 +119,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full border ${
                     isActive 
                       ? 'bg-white/20 text-white border-white/30' 
-                      : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                      : 'bg-indigo-500/20 text-indigo-200 border-indigo-500/40'
                   }`}>
                     {item.badge}
                   </span>
                 )}
                 {collapsed && typeof item.badge === 'number' && item.badge > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyan-400 ring-2 ring-[#10141e]" />
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyan-400 ring-2 ring-[#121824]" />
                 )}
               </button>
             );
@@ -135,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* User profile capsule card */}
       <div className="px-3 pt-2">
-        <div className={`flex items-center gap-2.5 p-2.5 rounded-2xl bg-[#151b29] border border-[#26334a] shadow-sm ${collapsed ? 'flex-col items-center justify-center gap-2' : 'justify-between'}`}>
+        <div className={`flex items-center gap-2.5 p-2.5 rounded-2xl bg-[#161e2e] border border-[#2d3c54] shadow-sm ${collapsed ? 'flex-col items-center justify-center gap-2' : 'justify-between'}`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-200 font-bold text-xs uppercase shrink-0 shadow-inner">
               {user?.username?.charAt(0) || 'A'}
@@ -143,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-bold text-white truncate tracking-tight">{user?.username || 'User'}</div>
-                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-300">
                   {user?.role || 'Admin'}
                 </div>
               </div>
@@ -155,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               id="logout-btn"
               onClick={logout}
               title="Sign out"
-              className="text-slate-400 hover:text-rose-400 p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
+              className="text-slate-300 hover:text-rose-400 p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
             >
               <LogOut className="w-4 h-4" />
             </button>

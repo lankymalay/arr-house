@@ -83,7 +83,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {/* Search Header - Pixel Search Widget & Sonos Precision Hardware */}
       <div className="sonos-card p-6 sm:p-8 relative overflow-hidden">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-sans">
+          <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight font-sans">
             Search Media & Indexers
           </h2>
           <p className="text-xs sm:text-sm text-[#9aa0a6] mt-1.5 mb-6">
@@ -237,7 +237,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm ${serviceBadgeClass}`}>
+                      <span className={`text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm ${serviceBadgeClass}`}>
                         {result.service}
                       </span>
                       {result.year && (
@@ -250,7 +250,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       )}
                     </div>
 
-                    <h4 className="text-sm font-extrabold text-white line-clamp-1 tracking-tight group-hover:text-white transition-colors">
+                    <h4 className="text-sm font-semibold text-white line-clamp-1 tracking-tight group-hover:text-white transition-colors">
                       {result.title}
                     </h4>
 

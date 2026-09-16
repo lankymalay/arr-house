@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   const safeServicesStatus = Array.isArray(servicesStatus) ? servicesStatus : [];
 
   return (
-    <header className="h-16 border-b border-[#26334a] bg-[#10141e]/95 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20 select-none transition-colors">
+    <header className="h-16 border-b border-[#2d3c54] bg-[#121824]/95 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20 select-none transition-colors">
       {/* Mobile Menu & Title */}
       <div className="flex items-center gap-3 min-w-0">
         {onToggleMobileMenu && (
@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3 min-w-0">
           <PirateShipIcon className="w-8 h-8 rounded-2xl shrink-0 md:hidden shadow-md shadow-indigo-950/40" withBadge />
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight truncate font-sans">
+            <h1 className="text-base sm:text-lg font-semibold text-white tracking-tight truncate font-sans">
               {title}
             </h1>
             <p className="text-xs text-slate-400 truncate hidden md:block">
@@ -82,8 +82,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Service status indicator strip */}
         {safeServicesStatus.length > 0 && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151b29] border border-[#26334a] shadow-sm">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mr-1 hidden sm:inline">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#161e2e] border border-[#2d3c54] shadow-sm">
+            <span className="text-[10px] uppercase font-medium text-slate-300 tracking-wider mr-1 hidden sm:inline">
               Stack:
             </span>
             {safeServicesStatus.map((s) => {

@@ -116,7 +116,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
       {/* Calendar Top Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-white tracking-tight font-sans">
+          <h2 className="text-2xl font-semibold text-white tracking-tight font-sans">
             Library Calendar
           </h2>
           <p className="text-xs sm:text-sm text-[#9aa0a6] mt-1">
@@ -184,7 +184,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
             </button>
           </div>
 
-          <h3 className="text-lg font-extrabold text-white tracking-tight font-sans">
+          <h3 className="text-lg font-semibold text-white tracking-tight font-sans">
             {monthNames[month]} {year}
           </h3>
         </div>
@@ -326,11 +326,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
                     className="p-4 rounded-2xl bg-[#1a1e28] border border-white/[0.06] flex items-center justify-between gap-4 hover:border-white/20 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${style.badge}`}>
+                      <span className={`text-[10px] font-medium uppercase px-2.5 py-0.5 rounded-full ${style.badge}`}>
                         {ev.service}
                       </span>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-white truncate tracking-tight">
+                        <h4 className="text-sm font-semibold text-white truncate tracking-tight">
                           {ev.seriesOrArtistTitle || ev.title}
                         </h4>
                         <p className="text-xs text-[#9aa0a6] truncate">
@@ -340,7 +340,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-xs font-bold text-white block font-mono">{ev.date}</span>
+                      <span className="text-xs font-medium text-white block font-mono">{ev.date}</span>
                       <span className="text-[10px] text-[#9aa0a6] font-medium">
                         {ev.hasFile ? 'Downloaded' : 'Monitored'}
                       </span>
@@ -359,10 +359,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
           <div className="bg-[#14171f] border border-white/[0.09] rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
             <div className="flex items-start justify-between">
               <div>
-                <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${getServiceStyles(selectedEvent.service).badge}`}>
+                <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded-full ${getServiceStyles(selectedEvent.service).badge}`}>
                   {selectedEvent.service}
                 </span>
-                <h3 className="text-lg font-extrabold text-white mt-1.5 tracking-tight font-sans">
+                <h3 className="text-lg font-semibold text-white mt-1.5 tracking-tight font-sans">
                   {selectedEvent.seriesOrArtistTitle || selectedEvent.title}
                 </h3>
                 <p className="text-xs text-[#9aa0a6]">

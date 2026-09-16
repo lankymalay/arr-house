@@ -51,17 +51,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Film className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
+          <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight font-sans">
             {overview?.totalMediaItems ?? 14}
           </div>
           <div className="flex items-center gap-2 mt-3 text-xs flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 font-bold text-[11px]">
+            <span className="px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30 font-medium text-[11px]">
               {overview?.seriesCount ?? 4} TV
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[11px]">
+            <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium text-[11px]">
               {overview?.moviesCount ?? 3} Movies
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold text-[11px]">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium text-[11px]">
               {overview?.musicCount ?? 3} Music
             </span>
           </div>
@@ -73,16 +73,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="theme-card p-5 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-950/20 transition-all cursor-pointer group relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-300">
               Active Transfers
             </span>
             <div className="w-9 h-9 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
               <DownloadCloud className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-baseline gap-2 font-sans">
+          <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight flex items-baseline gap-2 font-sans">
             {safeQueue.length}
-            <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">
+            <span className="text-xs font-medium text-cyan-400 uppercase tracking-wider">
               active
             </span>
           </div>
@@ -94,7 +94,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="w-0.5 h-3 bg-cyan-400 rounded-full animate-sonos-wave-2" />
                   <span className="w-0.5 h-1.5 bg-cyan-400 rounded-full animate-sonos-wave-3" />
                 </div>
-                <span className="text-cyan-300 font-semibold">Streaming / Downloading</span>
+                <span className="text-cyan-300 font-medium">Streaming / Downloading</span>
               </>
             ) : (
               <span className="text-slate-400">Queue idle & standby</span>
@@ -108,14 +108,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="theme-card p-5 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-950/20 transition-all cursor-pointer group relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-300">
               Monitored
             </span>
             <div className="w-9 h-9 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-sans">
+          <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight font-sans">
             {overview?.waitlistCount ?? 3}
           </div>
           <div className="mt-3 text-xs text-slate-300 truncate">
@@ -129,18 +129,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="theme-card p-5 hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-950/20 transition-all cursor-pointer group relative overflow-hidden"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-300">
               Indexers
             </span>
             <div className="w-9 h-9 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm">
               <Radio className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-baseline gap-2 font-sans">
+          <div className="text-3xl sm:text-4xl font-semibold text-white tracking-tight flex items-baseline gap-2 font-sans">
             {safeIndexers.filter(i => i.status === 'healthy').length}
-            <span className="text-xs font-bold text-slate-300">/ {safeIndexers.length} online</span>
+            <span className="text-xs font-medium text-slate-300">/ {safeIndexers.length} online</span>
           </div>
-          <div className="mt-3 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+          <div className="mt-3 text-xs text-emerald-400 font-medium flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span>{overview?.grabs24h ?? 277} grabs in 24h</span>
           </div>
@@ -150,12 +150,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Services Health Grid */}
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-slate-300">
             Connected Stack
           </h3>
           <button
             onClick={() => onNavigate('settings')}
-            className="text-xs font-bold text-indigo-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1 hover:bg-indigo-500/10"
+            className="text-xs font-medium text-indigo-400 hover:text-white flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1 hover:bg-indigo-500/10"
           >
             <span>Configure</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -187,21 +187,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors shadow-sm ${themeColor}`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <span className="font-extrabold text-sm text-white tracking-tight">{name}</span>
+                    <span className="font-semibold text-sm text-white tracking-tight">{name}</span>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#1c2436] border border-[#2b3952] text-slate-300 font-bold">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#1c2436] border border-[#2b3952] text-slate-300 font-medium">
                     {portLabel}
                   </span>
                 </div>
                 <div className="text-xs text-slate-300 flex items-center justify-between">
-                  <span className="font-medium text-slate-200">{count}</span>
+                  <span className="font-normal text-slate-200">{count}</span>
                   {isConnected ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-bold text-[11px]">
+                    <span className="text-emerald-400 flex items-center gap-1 font-medium text-[11px]">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {svcStatus?.latencyMs ? `${svcStatus.latencyMs}ms` : 'Active'}
                     </span>
                   ) : isError ? (
-                    <span className="text-rose-400 flex items-center gap-1 font-bold text-[11px]">
+                    <span className="text-rose-400 flex items-center gap-1 font-medium text-[11px]">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       Offline
                     </span>
@@ -227,11 +227,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="w-7 h-7 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shadow-sm">
                 <DownloadCloud className="w-3.5 h-3.5" />
               </div>
-              <h3 className="text-sm font-extrabold text-white tracking-tight">Active Queue & Transfers</h3>
+              <h3 className="text-sm font-semibold text-white tracking-tight">Active Queue & Transfers</h3>
             </div>
             <button
               onClick={() => onNavigate('queue')}
-              className="text-xs text-indigo-400 hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1 hover:bg-indigo-500/10"
+              className="text-xs text-indigo-400 hover:text-white font-medium flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1 hover:bg-indigo-500/10"
             >
               <span>Full Queue</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
@@ -283,11 +283,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="w-7 h-7 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shadow-sm">
                 <Calendar className="w-3.5 h-3.5" />
               </div>
-              <h3 className="text-sm font-extrabold text-white tracking-tight">Upcoming Releases</h3>
+              <h3 className="text-sm font-semibold text-white tracking-tight">Upcoming Releases</h3>
             </div>
             <button
               onClick={() => onNavigate('calendar')}
-              className="text-xs text-indigo-400 hover:text-white font-bold flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1 hover:bg-indigo-500/10"
+              className="text-xs text-indigo-400 hover:text-white font-medium flex items-center gap-1 cursor-pointer transition-colors pixel-pill px-2.5 py-1 hover:bg-indigo-500/10"
             >
               <span>Full Calendar</span>
               <ArrowUpRight className="w-3.5 h-3.5" />

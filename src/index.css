@@ -1,41 +1,45 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
 @layer base {
   :root {
-    /* Harmonious High-Contrast Obsidian & Indigo Dark Theme (Default) */
-    --theme-bg-main: #0b0e14;
-    --theme-bg-surface: #10141e;
-    --theme-bg-card: #151b29;
-    --theme-bg-card-hover: #1c2436;
-    --theme-bg-muted: #1a2233;
-    --theme-bg-elevated: #20293d;
-    --theme-bg-input: #0e121c;
+    /* Clear, Vibrant, High-Contrast Dark Theme (Default) */
+    --theme-bg-main: #0d111a;
+    --theme-bg-surface: #121824;
+    --theme-bg-card: #161e2e;
+    --theme-bg-card-hover: #1c263a;
+    --theme-bg-muted: #1c273c;
+    --theme-bg-elevated: #212c42;
+    --theme-bg-input: #0f1522;
 
-    --theme-border: #26334a;
-    --theme-border-subtle: #1c2637;
-    --theme-border-hover: #3b4d6e;
+    --theme-border: #2d3c54;
+    --theme-border-subtle: #222e42;
+    --theme-border-hover: #4b6288;
 
     --theme-text-primary: #ffffff;
     --theme-text-secondary: #e2e8f0;
     --theme-text-muted: #94a3b8;
-    --theme-header-bg: rgba(16, 20, 30, 0.95);
+    --theme-header-bg: rgba(18, 24, 36, 0.96);
 
-    /* Harmonized Vibrant Palette - Dark Mode Optimized */
+    /* Clear Vibrant Palette - Rich, High-Luminance Accents */
     --accent-indigo: #6366f1;
-    --accent-indigo-glow: rgba(99, 102, 241, 0.25);
-    --accent-cyan: #06b6d4;
-    --accent-cyan-glow: rgba(6, 182, 212, 0.25);
+    --accent-indigo-glow: rgba(99, 102, 241, 0.3);
+    --accent-cyan: #00c8ff;
+    --accent-cyan-glow: rgba(0, 200, 255, 0.3);
     --accent-emerald: #10b981;
-    --accent-emerald-glow: rgba(16, 185, 129, 0.25);
+    --accent-emerald-glow: rgba(16, 185, 129, 0.3);
     --accent-amber: #f59e0b;
-    --accent-amber-glow: rgba(245, 158, 11, 0.25);
+    --accent-amber-glow: rgba(245, 158, 11, 0.3);
     --accent-rose: #f43f5e;
-    --accent-rose-glow: rgba(244, 63, 94, 0.25);
+    --accent-rose-glow: rgba(244, 63, 94, 0.3);
     --accent-purple: #8b5cf6;
-    --accent-purple-glow: rgba(139, 92, 246, 0.25);
+    --accent-purple-glow: rgba(139, 92, 246, 0.3);
 
-    --theme-scrollbar-track: #0b0e14;
-    --theme-scrollbar-thumb: #26334a;
+    --theme-scrollbar-track: #0d111a;
+    --theme-scrollbar-thumb: #2d3c54;
   }
 
   /* Crisp, High-Contrast Modern Pro Light Theme */
@@ -56,9 +60,9 @@
     --theme-text-primary: #090d16;
     --theme-text-secondary: #334155;
     --theme-text-muted: #475569;
-    --theme-header-bg: rgba(255, 255, 255, 0.97);
+    --theme-header-bg: rgba(255, 255, 255, 0.98);
 
-    /* Harmonized Vibrant Palette - Light Mode High-Contrast (WCAG AAA) */
+    /* Harmonized Vibrant Palette - Light Mode High-Contrast */
     --accent-indigo: #4f46e5;
     --accent-indigo-glow: rgba(79, 70, 229, 0.15);
     --accent-cyan: #0284c7;
@@ -79,8 +83,31 @@
   body {
     background-color: var(--theme-bg-main);
     color: var(--theme-text-primary);
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  /* Tone down heavy bold styles across the application for a modern, refined aesthetic */
+  .font-extrabold {
+    font-weight: 600 !important;
+  }
+  .font-bold {
+    font-weight: 500 !important;
+  }
+
+  /* Universal Readability Enhancements for Dark Mode */
+  :root:not(.theme-light) .text-slate-400 {
+    color: #cbd5e1;
+  }
+  :root:not(.theme-light) .text-slate-500 {
+    color: #94a3b8;
+  }
+  :root:not(.theme-light) .text-slate-600 {
+    color: #94a3b8;
   }
 }
 
@@ -120,11 +147,13 @@
   border: 1px solid var(--theme-border);
   border-radius: 1rem;
   transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .theme-card:hover {
   border-color: var(--theme-border-hover);
   background-color: var(--theme-bg-card-hover);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
 /* App Shell Root */
@@ -147,23 +176,27 @@
 /* Neutral Surfaces in Light Mode */
 .theme-light .bg-\[\#0f121a\],
 .theme-light .bg-\[\#0b0e14\],
+.theme-light .bg-\[\#0d111a\],
 .theme-light .bg-\[\#0c0e12\] {
   background-color: var(--theme-bg-main) !important;
 }
 
 .theme-light .bg-\[\#131722\],
 .theme-light .bg-\[\#10141e\],
+.theme-light .bg-\[\#121824\],
 .theme-light .bg-\[\#141822\] {
   background-color: var(--theme-bg-surface) !important;
 }
 
 .theme-light .bg-\[\#131722\]\/95,
-.theme-light .bg-\[\#10141e\]\/95 {
+.theme-light .bg-\[\#10141e\]\/95,
+.theme-light .bg-\[\#121824\]\/95 {
   background-color: var(--theme-header-bg) !important;
 }
 
 .theme-light .bg-\[\#1d2331\],
 .theme-light .bg-\[\#151b29\],
+.theme-light .bg-\[\#161e2e\],
 .theme-light .bg-\[\#14171f\],
 .theme-light .bg-\[\#0d1017\],
 .theme-light .bg-\[\#0d1016\],
@@ -174,7 +207,9 @@
 
 .theme-light .bg-\[\#252c3e\],
 .theme-light .bg-\[\#1c2436\],
-.theme-light .bg-\[\#1a2233\] {
+.theme-light .bg-\[\#1c263a\],
+.theme-light .bg-\[\#1a2233\],
+.theme-light .bg-\[\#1c273c\] {
   background-color: var(--theme-bg-muted) !important;
 }
 
@@ -182,7 +217,8 @@
 .theme-light .border-\[\#2d3548\],
 .theme-light .border-\[\#364056\],
 .theme-light .border-\[\#3b455b\],
-.theme-light .border-\[\#26334a\] {
+.theme-light .border-\[\#26334a\],
+.theme-light .border-\[\#2d3c54\] {
   border-color: var(--theme-border) !important;
 }
 
@@ -218,6 +254,14 @@
 
 .theme-light .text-\[\#94a3b8\],
 .theme-light .text-\[\#9aa0a6\] {
+  color: var(--theme-text-muted) !important;
+}
+
+.theme-light .text-slate-300 {
+  color: var(--theme-text-secondary) !important;
+}
+
+.theme-light .text-slate-400 {
   color: var(--theme-text-muted) !important;
 }
 
