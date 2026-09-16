@@ -4,19 +4,15 @@ import {
   Film, 
   Search, 
   Calendar as CalendarIcon, 
-  Sparkles,
+  Sparkles, 
   DownloadCloud, 
   Settings, 
   LogOut, 
-  ChevronLeft,
-  ChevronRight,
-  Sun,
-  Moon
+  ChevronLeft, 
+  ChevronRight 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
-import { useTheme } from '../context/ThemeContext.js';
 import { PirateShipIcon } from './PirateShipIcon';
-import { ThemeToggleSwitch } from './ThemeToggleSwitch.js';
 
 export type NavTab = 'dashboard' | 'libraries' | 'search' | 'queue' | 'calendar' | 'external_calendar' | 'settings';
 
@@ -46,7 +42,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile
 }) => {
   const { user, logout, systemName } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const selectedTab: NavTab = currentTab || activeTab || 'dashboard';
 
   const handleSelectTab = (tab: NavTab) => {
@@ -166,23 +161,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {!collapsed ? (
-              <ThemeToggleSwitch id="sidebar-theme-toggle" size="sm" />
-            ) : (
-              <button
-                id="sidebar-theme-toggle-btn"
-                onClick={toggleTheme}
-                title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
-                className="text-slate-300 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-amber-400" />
-                ) : (
-                  <Moon className="w-4 h-4 text-sky-400" />
-                )}
-              </button>
-            )}
-
             <button
               id="logout-btn"
               onClick={logout}

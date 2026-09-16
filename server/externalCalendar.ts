@@ -551,16 +551,32 @@ export async function getExternalForthcomingReleases(
   }
 
   // 2. Fetch live TV shows from TVmaze schedule
+  // Strictly filter to ONLY new TV shows or the first episode of new TV shows (Episode 1)
+  // Completely exclude Episode 2, 3, etc. and non-premiere mid-season runs
   try {
     const fullSchedule = await getTVmazeFullSchedule();
-    const matchingEpisodes = fullSchedule.filter(ep => ep.airdate && ep.airdate.startsWith(monthPrefix));
+    const matchingEpisodes = fullSchedule.filter(ep => {
+      if (!ep.airdate || !ep.airdate.startsWith(monthPrefix)) return false;
+      const show = ep._embedded?.show;
+      if (!show || !show.name) return false;
 
-    // Group episodes by TV show so each show is represented once
+      // 1. Must strictly be Episode 1 (explicitly exclude episode 2, 3, etc.)
+      if (ep.number !== 1) return false;
+
+      // 2. Must be a new TV show debut / series premiere:
+      // - Season 1 Episode 1 (new series premiere)
+      // - Or show premiered on this airdate or in the current calendar year
+      const isSeasonOne = ep.season === 1;
+      const isShowDebut = Boolean(show.premiered && (show.premiered === ep.airdate || show.premiered.startsWith(`${year}-`)));
+      const isNewTvShow = isSeasonOne || isShowDebut || !ep.season;
+
+      return isNewTvShow;
+    });
+
+    // Group episodes by TV show so each new TV show is represented once (by its premiere)
     const showGroups = new Map<string, {
       show: any;
-      earliestEp: any;
-      premiereEp?: any;
-      totalEpisodesThisMonth: number;
+      premiereEp: any;
     }>();
 
     for (const ep of matchingEpisodes) {
@@ -568,42 +584,31 @@ export async function getExternalForthcomingReleases(
       if (!show || !show.name) continue;
 
       const showKey = (show.id ? String(show.id) : show.name).toLowerCase();
-      const group = showGroups.get(showKey);
-      if (!group) {
+      const existing = showGroups.get(showKey);
+      if (!existing) {
         showGroups.set(showKey, {
           show,
-          earliestEp: ep,
-          premiereEp: ep.number === 1 ? ep : undefined,
-          totalEpisodesThisMonth: 1
+          premiereEp: ep
         });
       } else {
-        group.totalEpisodesThisMonth += 1;
-        // Keep earliest upcoming airdate
-        if (ep.airdate < group.earliestEp.airdate) {
-          group.earliestEp = ep;
-        }
-        if (ep.number === 1 && !group.premiereEp) {
-          group.premiereEp = ep;
+        // Keep earliest airdate for Episode 1
+        if (ep.airdate < existing.premiereEp.airdate) {
+          existing.premiereEp = ep;
         }
       }
     }
 
-    // Sort distinct shows by popularity weight and filter
+    // Sort distinct new shows by popularity weight and quality rating
     const sortedShows = Array.from(showGroups.values())
-      .filter(({ show, premiereEp }) => {
-        return (show.weight && show.weight >= 40) || 
-               (show.rating?.average && show.rating.average >= 6.5) || 
-               Boolean(premiereEp);
-      })
       .sort((a, b) => (b.show.weight || 0) - (a.show.weight || 0));
 
-    // Cap to top 45 distinct TV shows per month
-    for (const { show, earliestEp, premiereEp, totalEpisodesThisMonth } of sortedShows.slice(0, 45)) {
+    // Cap to top 45 distinct new TV shows / premieres per month
+    for (const { show, premiereEp } of sortedShows.slice(0, 45)) {
       const uniqueKey = `tv-${show.name.toLowerCase()}`;
       if (seenKeys.has(uniqueKey)) continue;
       seenKeys.add(uniqueKey);
 
-      const targetEp = premiereEp || earliestEp;
+      const targetEp = premiereEp;
       const seasonStr = String(targetEp.season || 1).padStart(2, '0');
       const numberStr = String(targetEp.number || 1).padStart(2, '0');
       const episodeCode = `S${seasonStr}E${numberStr}`;
@@ -615,13 +620,11 @@ export async function getExternalForthcomingReleases(
       const networkName = show.network?.name || show.webChannel?.name || 'TV Broadcast';
       const summaryText = stripHtml(show.summary || targetEp.summary || '');
       const poster = show.image?.medium || show.image?.original || targetEp.image?.medium || '';
-      const isPremiere = targetEp.number === 1;
 
-      const episodeBadge = isPremiere
-        ? `${networkName} • Season ${targetEp.season || 1} Premiere`
-        : totalEpisodesThisMonth > 1
-          ? `${networkName} • Season ${targetEp.season || 1} (${totalEpisodesThisMonth} eps in ${monthPrefix})`
-          : `${networkName} • Next: ${episodeCode}`;
+      const isSeasonOne = targetEp.season === 1 || !targetEp.season;
+      const episodeBadge = isSeasonOne
+        ? `${networkName} • New Series Premiere (Ep 1)`
+        : `${networkName} • Season ${targetEp.season} Premiere (Ep 1)`;
 
       items.push({
         id: `tvmaze-show-${show.id || targetEp.id}`,
@@ -632,9 +635,9 @@ export async function getExternalForthcomingReleases(
         rating,
         ratingCount: episodeBadge,
         genres: show.genres && show.genres.length > 0 ? show.genres : ['Drama'],
-        status: isPremiere ? 'premiering' : 'upcoming',
+        status: 'premiering',
         popularityScore: Math.min(100, show.weight || 80),
-        overview: summaryText || `${show.name} returning with new episodes on ${networkName}.`,
+        overview: summaryText || `${show.name} debuting new series premiere on ${networkName}.`,
         posterUrl: poster
       });
     }

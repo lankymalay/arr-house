@@ -134,7 +134,14 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
 
     for (const item of data.all) {
       if (item.mediaType === 'tv') {
-        // Strip out trailing episode codes like "S01E02" so title is just the clean TV show name
+        // Strictly exclude episode 2, 3, etc. or ongoing mid-season runs
+        const combinedMeta = `${item.title} ${item.seriesOrArtistTitle || ''} ${item.ratingCount || ''}`;
+        const hasLaterEpisode = /\b(S\d+E0*[2-9]|S\d+E\d{2,}|Ep\s*0*[2-9]|Episode\s*0*[2-9]|Next:\s*S\d+E0*[2-9])/i.test(combinedMeta);
+        if (hasLaterEpisode) {
+          continue;
+        }
+
+        // Clean TV show name
         const cleanShowTitle = (item.seriesOrArtistTitle || item.title.replace(/\s+S\d+E\d+.*$/i, '')).trim();
         const showKey = cleanShowTitle.toLowerCase();
         const existing = tvShowsGrouped.get(showKey);
@@ -344,7 +351,7 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
               <Tv className="w-3.5 h-3.5 text-sky-400" />
             </div>
             <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.tv}</div>
-            <div className="text-[11px] text-sky-300 mt-0.5">Returning & premieres</div>
+            <div className="text-[11px] text-sky-300 mt-0.5">New series &amp; Ep 1 premieres</div>
           </button>
 
           <button

@@ -1,64 +1,94 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
   <defs>
     <!-- Background Badge Gradient -->
-    <linearGradient id="arhFavBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e2536"/>
-      <stop offset="100%" stop-color="#0e131d"/>
+    <linearGradient id="legoFavBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182235"/>
+      <stop offset="100%" stop-color="#0b0f17"/>
     </linearGradient>
 
-    <!-- Roof Gradient -->
-    <linearGradient id="arhFavRoof" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa"/>
-      <stop offset="100%" stop-color="#2563eb"/>
+    <!-- Pirate Pennant Yellow -->
+    <linearGradient id="legoFavFlag" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="100%" stop-color="#eab308"/>
     </linearGradient>
 
-    <!-- Flag Gradient -->
-    <linearGradient id="arhFavFlag" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="100%" stop-color="#0284c7"/>
+    <!-- House Roof Slope Brick (Lego Royal Blue) -->
+    <linearGradient id="legoFavRoof" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
     </linearGradient>
 
-    <!-- Hull Gradient -->
-    <linearGradient id="arhFavHull" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2b3952"/>
-      <stop offset="100%" stop-color="#151e2e"/>
+    <!-- Cabin / Server Stack (Lego Navy Slate) -->
+    <linearGradient id="legoFavCabin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#24334b"/>
+      <stop offset="100%" stop-color="#131b28"/>
+    </linearGradient>
+
+    <!-- Ship Hull Inverted Slope Brick -->
+    <linearGradient id="legoFavHull" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
   </defs>
 
   <!-- Container Base Badge -->
-  <rect width="64" height="64" rx="16" fill="url(#arhFavBg)"/>
-  <rect width="62" height="62" x="1" y="1" rx="15" stroke="#3b455b" stroke-width="1.2" fill="none"/>
+  <rect width="64" height="64" rx="16" fill="url(#legoFavBg)"/>
+  <rect width="62" height="62" x="1" y="1" rx="15" stroke="#2e3c54" stroke-width="1.2" fill="none"/>
 
-  <!-- 1. Main Ship Mast -->
-  <line x1="32" y1="6" x2="32" y2="18" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="32" cy="6" r="1.5" fill="#38bdf8"/>
+  <!-- 1. LEGO MAST & PIRATE PENNANT (Top Piece) -->
+  <rect x="30" y="5" width="4" height="2.2" rx="0.8" fill="#e2e8f0"/>
+  <rect x="30.5" y="7" width="3" height="9" rx="0.5" fill="#94a3b8"/>
+  <path d="M 33.5 7 L 48 7 L 43.5 11 L 48 15 L 33.5 15 Z" fill="url(#legoFavFlag)"/>
+  <rect x="33.5" y="7" width="14.5" height="1" fill="#fef08a" opacity="0.6"/>
+  <circle cx="38" cy="11" r="1.3" fill="#ffffff"/>
 
-  <!-- 2. Pirate Swallowtail Pennant Flag -->
-  <path d="M 32 7.5 L 46 11.5 L 40 14 L 46 16.5 L 32 17.5 Z" fill="url(#arhFavFlag)"/>
-  <circle cx="36" cy="12.5" r="1" fill="#ffffff"/>
+  <!-- 2. LEGO ROOF SLOPE BRICK (Gable House Roof & Mainsail) -->
+  <g>
+    <rect x="25.5" y="14.5" width="4.5" height="2.4" rx="0.8" fill="#60a5fa"/>
+    <rect x="25.5" y="14.5" width="4.5" height="0.8" fill="#bfdbfe" opacity="0.8"/>
+  </g>
+  <g>
+    <rect x="34" y="14.5" width="4.5" height="2.4" rx="0.8" fill="#60a5fa"/>
+    <rect x="34" y="14.5" width="4.5" height="0.8" fill="#bfdbfe" opacity="0.8"/>
+  </g>
+  <path d="M 23.5 16.9 L 40.5 16.9 L 50 26.5 L 50 28.5 L 14 28.5 L 14 26.5 Z" fill="url(#legoFavRoof)"/>
+  <path d="M 23.5 16.9 L 40.5 16.9" stroke="#93c5fd" stroke-width="0.9"/>
+  <circle cx="32" cy="23.5" r="3.2" fill="#0b0f17"/>
+  <circle cx="32" cy="23.5" r="1.8" fill="#38bdf8"/>
 
-  <!-- 3. House Gable Roof -->
-  <path d="M 14 27.5 L 32 15 L 50 27.5 L 46 29 L 32 19 L 18 29 Z" fill="url(#arhFavRoof)"/>
-  <circle cx="32" cy="23.5" r="2.5" fill="#0f172a" stroke="#60a5fa" stroke-width="1"/>
-  <circle cx="32" cy="23.5" r="1.2" fill="#69f0ae"/>
+  <!-- 3. LEGO HOUSE CABIN / SERVER STACK (Modular 2x4 Brick) -->
+  <rect x="14" y="29.8" width="36" height="9.2" rx="1.2" fill="url(#legoFavCabin)" stroke="#334155" stroke-width="0.9"/>
+  <line x1="15" y1="30.5" x2="49" y2="30.5" stroke="#475569" stroke-width="0.8"/>
+  <line x1="14" y1="34.4" x2="50" y2="34.4" stroke="#101724" stroke-width="0.9"/>
 
-  <!-- 4. Server Stack Blade 1 -->
-  <rect x="17" y="30" width="30" height="5.5" rx="1.5" fill="#1e293b" stroke="#3b455b" stroke-width="1"/>
-  <rect x="20.5" y="32" width="16" height="1.5" rx="0.75" fill="#475569"/>
-  <circle cx="42.5" cy="32.75" r="1.2" fill="#38bdf8"/>
+  <rect x="18" y="31.5" width="13" height="1.8" rx="0.75" fill="#090d14"/>
+  <circle cx="43.5" cy="32.4" r="1.1" fill="#38bdf8"/>
 
-  <!-- 5. Server Stack Blade 2 -->
-  <rect x="17" y="37.5" width="30" height="5.5" rx="1.5" fill="#1e293b" stroke="#3b455b" stroke-width="1"/>
-  <rect x="20.5" y="39.5" width="16" height="1.5" rx="0.75" fill="#475569"/>
-  <circle cx="42.5" cy="40.25" r="1.2" fill="#69f0ae"/>
+  <rect x="18" y="35.6" width="13" height="1.8" rx="0.75" fill="#090d14"/>
+  <circle cx="43.5" cy="36.5" r="1.1" fill="#22c55e"/>
 
-  <!-- 6. Server Stack Blade 3 / Galleon Hull -->
-  <path d="M 17 45 L 47 45 C 51.5 45 54 43 54 43 C 52.5 49 44 54 32 54 C 20 54 11.5 49 10 43 C 10 43 12.5 45 17 45 Z" fill="url(#arhFavHull)" stroke="#475569" stroke-width="1.2"/>
-  <path d="M 16 48.5 C 23 51 41 51 48 48.5" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
-  <circle cx="25" cy="48" r="1" fill="#38bdf8"/>
-  <circle cx="32" cy="49" r="1" fill="#69f0ae"/>
-  <circle cx="39" cy="48" r="1" fill="#38bdf8"/>
+  <!-- 4. LEGO PIRATE SHIP HULL (Inverted Boat Slope Brick) -->
+  <g>
+    <rect x="10.5" y="38" width="3.5" height="2.2" rx="0.75" fill="#38bdf8"/>
+    <rect x="10.5" y="38" width="3.5" height="0.7" fill="#bae6fd" opacity="0.9"/>
+  </g>
+  <g>
+    <rect x="50" y="38" width="3.5" height="2.2" rx="0.75" fill="#38bdf8"/>
+    <rect x="50" y="38" width="3.5" height="0.7" fill="#bae6fd" opacity="0.9"/>
+  </g>
+  <path d="M 9.5 40.2 L 54.5 40.2 L 46 49.5 L 18 49.5 Z" fill="url(#legoFavHull)" stroke="#38bdf8" stroke-width="0.9"/>
+  <line x1="10.5" y1="41" x2="53.5" y2="41" stroke="#38bdf8" stroke-width="0.8" opacity="0.8"/>
 
-  <!-- 7. Minimal Keel Wake Wave -->
-  <path d="M 19 57.5 C 25 56 39 56 45 57.5" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+  <circle cx="23.5" cy="45.5" r="2.2" fill="#0b0f17" stroke="#38bdf8" stroke-width="0.8"/>
+  <circle cx="23.5" cy="45.5" r="1.1" fill="#38bdf8"/>
+
+  <circle cx="32" cy="45.5" r="2.2" fill="#0b0f17" stroke="#fbbf24" stroke-width="0.8"/>
+  <circle cx="32" cy="45.5" r="1.1" fill="#fbbf24"/>
+
+  <circle cx="40.5" cy="45.5" r="2.2" fill="#0b0f17" stroke="#38bdf8" stroke-width="0.8"/>
+  <circle cx="40.5" cy="45.5" r="1.1" fill="#38bdf8"/>
+
+  <!-- 5. WATER BASEPLATE TILE -->
+  <rect x="16" y="52.8" width="32" height="2.6" rx="1.3" fill="#38bdf8"/>
+  <rect x="17" y="53" width="30" height="0.8" fill="#e0f2fe" opacity="0.6"/>
 </svg>
