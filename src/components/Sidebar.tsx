@@ -74,16 +74,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-extrabold text-[15px] text-white tracking-tight block truncate font-sans">
                   {systemName}
                 </span>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <div className="flex items-center gap-0.5 h-3">
-                    <span className="w-0.5 h-2.5 bg-[#69f0ae] rounded-full animate-sonos-wave-1" />
-                    <span className="w-0.5 h-3 bg-[#69f0ae] rounded-full animate-sonos-wave-2" />
-                    <span className="w-0.5 h-2 bg-[#69f0ae] rounded-full animate-sonos-wave-3" />
-                  </div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#69f0ae]">
-                    Online
-                  </span>
-                </div>
               </div>
             </div>
           ) : (
