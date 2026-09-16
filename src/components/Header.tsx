@@ -1,8 +1,8 @@
 import React from 'react';
-import { Menu, Sun, Moon } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import type { NavTab } from './Sidebar.js';
 import { PirateShipIcon } from './PirateShipIcon.js';
-import { useTheme } from '../context/ThemeContext.js';
+import { ThemeToggleSwitch } from './ThemeToggleSwitch.js';
 
 interface HeaderProps {
   currentTab?: NavTab;
@@ -22,7 +22,6 @@ export const Header: React.FC<HeaderProps> = ({
   servicesStatus = [],
   onToggleMobileMenu
 }) => {
-  const { theme, toggleTheme } = useTheme();
   const tab: NavTab = currentTab || activeTab || 'dashboard';
 
   const getTabTitle = (t: NavTab) => {
@@ -50,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   const safeServicesStatus = Array.isArray(servicesStatus) ? servicesStatus : [];
 
   return (
-    <header className="h-16 border-b border-[#2d3548] bg-[#131722]/95 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20 select-none">
+    <header className="h-16 border-b border-[#26334a] bg-[#10141e]/95 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20 select-none transition-colors">
       {/* Mobile Menu & Title */}
       <div className="flex items-center gap-3 min-w-0">
         {onToggleMobileMenu && (
@@ -58,18 +57,18 @@ export const Header: React.FC<HeaderProps> = ({
             id="mobile-menu-btn"
             onClick={onToggleMobileMenu}
             title="Toggle navigation"
-            className="md:hidden p-2 rounded-full text-[#cbd5e1] hover:text-white hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
+            className="md:hidden p-2 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
         <div className="flex items-center gap-3 min-w-0">
-          <PirateShipIcon className="w-7 h-7 rounded-xl shrink-0 md:hidden shadow-sm" withBadge />
+          <PirateShipIcon className="w-8 h-8 rounded-2xl shrink-0 md:hidden shadow-md shadow-indigo-950/40" withBadge />
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-extrabold text-white tracking-tight truncate font-sans">
               {title}
             </h1>
-            <p className="text-xs text-[#cbd5e1] truncate hidden md:block">
+            <p className="text-xs text-slate-400 truncate hidden md:block">
               {subtitle}
             </p>
           </div>
@@ -77,31 +76,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Actions & Status */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Theme Toggle Button */}
-        <button
-          id="theme-toggle-header-btn"
-          onClick={toggleTheme}
-          title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1d2331] border border-[#364056] text-[#cbd5e1] hover:text-white hover:border-[#8ab4f8] transition-all cursor-pointer shadow-sm active:scale-95 pixel-pill"
-        >
-          {theme === 'dark' ? (
-            <>
-              <Sun className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-[11px] font-bold hidden sm:inline">Light</span>
-            </>
-          ) : (
-            <>
-              <Moon className="w-3.5 h-3.5 text-sky-500" />
-              <span className="text-[11px] font-bold hidden sm:inline">Dark</span>
-            </>
-          )}
-        </button>
+      <div className="flex items-center gap-3 shrink-0">
+        {/* Sliding Theme Toggle Switch */}
+        <ThemeToggleSwitch id="header-theme-toggle" size="md" />
 
-        {/* Service status indicator strip - Material capsule style */}
+        {/* Service status indicator strip */}
         {safeServicesStatus.length > 0 && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1d2331] border border-[#364056]">
-            <span className="text-[10px] uppercase font-bold text-[#cbd5e1] tracking-wider mr-1">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#151b29] border border-[#26334a] shadow-sm">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mr-1 hidden sm:inline">
               Stack:
             </span>
             {safeServicesStatus.map((s) => {
@@ -110,13 +92,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <div 
                   key={s.id}
                   title={`${s.name}: ${s.status} ${s.version ? `(${s.version})` : ''}`}
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#252c3e] border border-[#3b455b] text-[11px] font-medium"
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#1c2436] border border-[#2b3952] text-[11px] font-medium"
                 >
                   <span 
                     className={`w-2 h-2 rounded-full shrink-0 ${
                       isConnected 
-                        ? 'bg-[#69f0ae] shadow-[0_0_8px_rgba(105,240,174,0.6)]' 
-                        : 'bg-[#ff8a80]'
+                        ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]' 
+                        : 'bg-rose-500'
                     }`} 
                   />
                   <span className="text-white text-[10px] font-bold">{s.name}</span>

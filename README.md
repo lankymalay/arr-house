@@ -85,10 +85,28 @@ services:
 
 ---
 
-#### Step 3: 1-Click Updates in TrueNAS SCALE
-- Whenever you push new commits or create a release on GitHub, GitHub Actions builds and updates `ghcr.io/<your-github-username>/arr-house:latest`.
-- TrueNAS SCALE periodically checks the registry image digest. When an update is detected, an **"Update Available"** badge appears on the Arr House app card.
-- Click **"Update"** in TrueNAS: TrueNAS downloads the new image layer and restarts the container. Your configuration and database in `/app/data` persist safely across updates.
+#### Step 3: Updating in TrueNAS SCALE
+
+> **Note on "Check for Updates":** TrueNAS SCALE's global "Check for Updates" button is *only* displayed for official Catalog apps. For **Custom Apps** using GitHub Docker images, use either:
+
+- **Method A (Easiest for TrueNAS SCALE 24.10+ Electric Eel):**
+  Add `pull_policy: always` to your Compose YAML:
+  ```yaml
+  services:
+    arr-house:
+      image: ghcr.io/<your-github-username>/arr-house:latest
+      pull_policy: always
+  ```
+  Whenever you push a new release to GitHub, simply click the **three dots (`⋮`)** on the Arr House card in TrueNAS -> click **Restart**. TrueNAS will query GitHub, pull the newest image layer, and restart.
+
+- **Method B (All TrueNAS SCALE Versions via "Manage Container Images"):**
+  1. Go to **Apps** in TrueNAS.
+  2. Click the **three dots (`⋮`)** or **Settings** icon in the top right corner -> **Manage Container Images**.
+  3. Locate `ghcr.io/<your-github-username>/arr-house`, click its menu -> **Pull** (or click **Pull Image** at top right).
+  4. Go back to **Installed Apps** and click **Restart** (or **Edit** -> **Save**) on Arr House.
+
+- **Method C (Zero-Touch):**
+  Deploy **Watchtower** on TrueNAS, which automatically polls your GitHub Container Registry and updates containers with zero manual steps.
 
 ---
 

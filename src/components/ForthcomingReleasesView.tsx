@@ -301,66 +301,66 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button
             onClick={() => { setActiveType('all'); setSelectedMonthKey('all'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
               activeType === 'all'
-                ? 'bg-cyan-950/30 border-cyan-500/40 shadow-lg shadow-cyan-950/30'
-                : 'bg-[#0f1218]/80 border-white/[0.06] hover:border-white/[0.12]'
+                ? 'bg-indigo-500/20 border-indigo-500/50 shadow-md shadow-indigo-950/40'
+                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span className="font-medium">All Forthcoming</span>
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <span className="font-semibold">All Forthcoming</span>
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             </div>
             <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.total}</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Arriving next 90 days</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Arriving next 90 days</div>
           </button>
 
           <button
             onClick={() => { setActiveType('movie'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
               activeType === 'movie'
-                ? 'bg-purple-950/30 border-purple-500/40 shadow-lg shadow-purple-950/30'
-                : 'bg-[#0f1218]/80 border-white/[0.06] hover:border-white/[0.12]'
+                ? 'bg-amber-500/20 border-amber-500/50 shadow-md shadow-amber-950/40'
+                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span className="font-medium">Movies</span>
-              <Film className="w-3.5 h-3.5 text-purple-400" />
+            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <span className="font-semibold">Movies</span>
+              <Film className="w-3.5 h-3.5 text-amber-400" />
             </div>
             <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.movie}</div>
-            <div className="text-[11px] text-purple-400/80 mt-0.5">Theatrical & streaming</div>
+            <div className="text-[11px] text-amber-300 mt-0.5">Theatrical & streaming</div>
           </button>
 
           <button
             onClick={() => { setActiveType('tv'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
               activeType === 'tv'
-                ? 'bg-blue-950/30 border-blue-500/40 shadow-lg shadow-blue-950/30'
-                : 'bg-[#0f1218]/80 border-white/[0.06] hover:border-white/[0.12]'
+                ? 'bg-sky-500/20 border-sky-500/50 shadow-md shadow-sky-950/40'
+                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span className="font-medium">TV Shows</span>
-              <Tv className="w-3.5 h-3.5 text-blue-400" />
+            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <span className="font-semibold">TV Shows</span>
+              <Tv className="w-3.5 h-3.5 text-sky-400" />
             </div>
             <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.tv}</div>
-            <div className="text-[11px] text-blue-400/80 mt-0.5">Returning & premieres</div>
+            <div className="text-[11px] text-sky-300 mt-0.5">Returning & premieres</div>
           </button>
 
           <button
             onClick={() => { setActiveType('music'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all ${
+            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
               activeType === 'music'
-                ? 'bg-emerald-950/30 border-emerald-500/40 shadow-lg shadow-emerald-950/30'
-                : 'bg-[#0f1218]/80 border-white/[0.06] hover:border-white/[0.12]'
+                ? 'bg-emerald-500/20 border-emerald-500/50 shadow-md shadow-emerald-950/40'
+                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
             }`}
           >
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span className="font-medium">Music Albums</span>
+            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
+              <span className="font-semibold">Music Albums</span>
               <Music className="w-3.5 h-3.5 text-emerald-400" />
             </div>
             <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.music}</div>
-            <div className="text-[11px] text-emerald-400/80 mt-0.5">Studio records</div>
+            <div className="text-[11px] text-emerald-300 mt-0.5">Studio records</div>
           </button>
         </div>
       )}

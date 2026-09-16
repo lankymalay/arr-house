@@ -86,27 +86,27 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
     switch (svc) {
       case 'sonarr':
         return {
-          bg: 'bg-[#a8c7fa]/15 text-[#a8c7fa] border-white/[0.08]',
-          dot: 'bg-[#a8c7fa]',
-          badge: 'bg-[#a8c7fa] text-[#041e49]'
+          bg: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+          dot: 'bg-sky-400',
+          badge: 'bg-sky-500 text-white font-bold'
         };
       case 'radarr':
         return {
-          bg: 'bg-[#e0d0b8]/15 text-[#e0d0b8] border-white/[0.08]',
-          dot: 'bg-[#e0d0b8]',
-          badge: 'bg-[#e0d0b8] text-[#3e2723]'
+          bg: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+          dot: 'bg-amber-400',
+          badge: 'bg-amber-500 text-white font-bold'
         };
       case 'lidarr':
         return {
-          bg: 'bg-[#b4e3be]/15 text-[#b4e3be] border-white/[0.08]',
-          dot: 'bg-[#b4e3be]',
-          badge: 'bg-[#b4e3be] text-[#072711]'
+          bg: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+          dot: 'bg-emerald-400',
+          badge: 'bg-emerald-500 text-white font-bold'
         };
       default:
         return {
-          bg: 'bg-white/10 text-white border-white/[0.08]',
-          dot: 'bg-white',
-          badge: 'bg-white text-black'
+          bg: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
+          dot: 'bg-indigo-400',
+          badge: 'bg-indigo-500 text-white font-bold'
         };
     }
   };
@@ -195,8 +195,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
             onClick={() => toggleService('sonarr')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
               enabledServices.sonarr 
-                ? 'bg-[#a8c7fa]/20 text-[#a8c7fa] border-[#a8c7fa]/40 font-bold' 
-                : 'bg-[#1a1e28] text-[#5f6368] border-transparent'
+                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 font-bold shadow-sm' 
+                : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
             }`}
           >
             <Tv className="w-3.5 h-3.5" />
@@ -207,8 +207,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
             onClick={() => toggleService('radarr')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
               enabledServices.radarr 
-                ? 'bg-[#e0d0b8]/20 text-[#e0d0b8] border-[#e0d0b8]/40 font-bold' 
-                : 'bg-[#1a1e28] text-[#5f6368] border-transparent'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold shadow-sm' 
+                : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
             }`}
           >
             <Film className="w-3.5 h-3.5" />
@@ -219,8 +219,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
             onClick={() => toggleService('lidarr')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
               enabledServices.lidarr 
-                ? 'bg-[#b4e3be]/20 text-[#b4e3be] border-[#b4e3be]/40 font-bold' 
-                : 'bg-[#1a1e28] text-[#5f6368] border-transparent'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold shadow-sm' 
+                : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
             }`}
           >
             <Music className="w-3.5 h-3.5" />

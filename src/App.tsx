@@ -257,7 +257,7 @@ const MainLayout: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#0f121a] text-white flex flex-col md:flex-row antialiased selection:bg-[#8ab4f8] selection:text-[#041e49]">
+    <div className="min-h-screen app-shell flex flex-col md:flex-row antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-200">
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}

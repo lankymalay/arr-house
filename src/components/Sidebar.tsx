@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext.js';
 import { useTheme } from '../context/ThemeContext.js';
 import { PirateShipIcon } from './PirateShipIcon';
+import { ThemeToggleSwitch } from './ThemeToggleSwitch.js';
 
 export type NavTab = 'dashboard' | 'libraries' | 'search' | 'queue' | 'calendar' | 'external_calendar' | 'settings';
 
@@ -117,25 +118,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 id={`nav-${item.id}`}
                 onClick={() => handleSelectTab(item.id)}
                 title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full font-medium text-sm transition-all duration-200 relative cursor-pointer pixel-pill ${
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full font-semibold text-sm transition-all duration-200 relative cursor-pointer pixel-pill ${
                   isActive
-                    ? 'bg-[#283854] text-[#d3e3fd] font-bold shadow-sm border border-[#48638f]'
-                    : 'text-[#cbd5e1] hover:text-white hover:bg-white/10'
+                    ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-950/40 border border-indigo-400/40'
+                    : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-[#8ab4f8]' : 'text-[#94a3b8]'}`} />
+                <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400'}`} />
                 {!collapsed && (
                   <span className="truncate flex-1 text-left tracking-tight">
                     {item.label}
                   </span>
                 )}
                 {!collapsed && typeof item.badge === 'number' && item.badge > 0 && (
-                  <span className="px-2 py-0.5 text-[11px] font-bold rounded-full bg-[#183868] text-[#d3e3fd] border border-[#3b639e]">
+                  <span className={`px-2 py-0.5 text-[11px] font-bold rounded-full border ${
+                    isActive 
+                      ? 'bg-white/20 text-white border-white/30' 
+                      : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                  }`}>
                     {item.badge}
                   </span>
                 )}
                 {collapsed && typeof item.badge === 'number' && item.badge > 0 && (
-                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#8ab4f8] ring-2 ring-[#131722]" />
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyan-400 ring-2 ring-[#10141e]" />
                 )}
               </button>
             );
@@ -145,38 +150,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* User profile capsule card */}
       <div className="px-3 pt-2">
-        <div className={`flex items-center gap-3 p-2.5 rounded-2xl bg-[#1d2331] border border-[#364056] ${collapsed ? 'justify-center' : ''}`}>
-          <div className="w-8 h-8 rounded-full bg-[#283854] border border-[#48638f] flex items-center justify-center text-[#d3e3fd] font-bold text-xs uppercase shrink-0">
-            {user?.username?.charAt(0) || 'A'}
-          </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-white truncate tracking-tight">{user?.username || 'User'}</div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-[#94a3b8]">
-                {user?.role || 'Admin'}
-              </div>
+        <div className={`flex items-center gap-2.5 p-2.5 rounded-2xl bg-[#151b29] border border-[#26334a] shadow-sm ${collapsed ? 'flex-col items-center justify-center gap-2' : 'justify-between'}`}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-indigo-950/80 border border-indigo-500/40 flex items-center justify-center text-indigo-200 font-bold text-xs uppercase shrink-0 shadow-inner">
+              {user?.username?.charAt(0) || 'A'}
             </div>
-          )}
-          <button
-            id="sidebar-theme-toggle-btn"
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
-            className="text-[#cbd5e1] hover:text-[#8ab4f8] p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-sky-400" />
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-white truncate tracking-tight">{user?.username || 'User'}</div>
+                <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  {user?.role || 'Admin'}
+                </div>
+              </div>
             )}
-          </button>
-          <button
-            id="logout-btn"
-            onClick={logout}
-            title="Sign out"
-            className="text-[#cbd5e1] hover:text-[#ff8a80] p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {!collapsed ? (
+              <ThemeToggleSwitch id="sidebar-theme-toggle" size="sm" />
+            ) : (
+              <button
+                id="sidebar-theme-toggle-btn"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
+                className="text-slate-300 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-4 h-4 text-amber-400" />
+                ) : (
+                  <Moon className="w-4 h-4 text-sky-400" />
+                )}
+              </button>
+            )}
+
+            <button
+              id="logout-btn"
+              onClick={logout}
+              title="Sign out"
+              className="text-slate-400 hover:text-rose-400 p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -186,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex h-screen sticky top-0 bg-[#131722] border-r border-[#2d3548] flex-col justify-between transition-all duration-300 z-30 shrink-0 select-none ${
+        className={`hidden md:flex h-screen sticky top-0 bg-[#10141e] border-r border-[#26334a] flex-col justify-between transition-all duration-300 z-30 shrink-0 select-none ${
           collapsed ? 'w-20' : 'w-64'
         }`}
       >
@@ -200,7 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
             onClick={onCloseMobile} 
           />
-          <div className="relative w-64 max-w-[80vw] h-full bg-[#131722] border-r border-[#2d3548] shadow-2xl z-10 flex flex-col">
+          <div className="relative w-64 max-w-[80vw] h-full bg-[#10141e] border-r border-[#26334a] shadow-2xl z-10 flex flex-col">
             {sidebarContent}
           </div>
         </div>
