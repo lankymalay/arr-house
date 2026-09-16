@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ToastProvider, useToast } from './context/ToastContext.js';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
+import { ThemeProvider } from './context/ThemeContext.js';
 import { ErrorBoundary } from './components/ErrorBoundary.js';
 import { Sidebar, NavTab } from './components/Sidebar.js';
 import { Header } from './components/Header.js';
@@ -383,11 +384,13 @@ const MainLayout: React.FC = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <AuthProvider>
-          <MainLayout />
-        </AuthProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <MainLayout />
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

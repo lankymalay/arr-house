@@ -8,11 +8,14 @@ import {
   FolderTree, 
   Users, 
   Trash2, 
-  Download
+  Download,
+  Sun,
+  Moon
 } from 'lucide-react';
 import type { ServiceConfig, ServiceId, User, UserRole } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { useAuth } from '../context/AuthContext.js';
+import { useTheme } from '../context/ThemeContext.js';
 
 interface SettingsViewProps {
   onRefreshStack: () => void;
@@ -22,6 +25,7 @@ interface SettingsViewProps {
 export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user: propUser }) => {
   const { success, error } = useToast();
   const { user: authUser, isAdmin: authIsAdmin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const user = propUser || authUser;
   const isAdmin = user ? user.role === 'admin' : authIsAdmin;
 
@@ -302,6 +306,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Theme Quick Toggle */}
+          <button
+            id="settings-theme-toggle-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="px-3.5 py-2 bg-[#14171f] hover:bg-[#1a1e28] text-white text-xs font-bold rounded-full border border-white/[0.08] transition-all flex items-center gap-1.5 cursor-pointer pixel-pill"
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Theme: Dark</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-sky-400" />
+                <span className="hidden sm:inline">Theme: Light</span>
+              </>
+            )}
+          </button>
+
           {isAdmin && (
             <a
               href="/api/system/export-config"

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, Sun, Moon } from 'lucide-react';
 import type { NavTab } from './Sidebar.js';
 import { PirateShipIcon } from './PirateShipIcon.js';
+import { useTheme } from '../context/ThemeContext.js';
 
 interface HeaderProps {
   currentTab?: NavTab;
@@ -21,6 +22,7 @@ export const Header: React.FC<HeaderProps> = ({
   servicesStatus = [],
   onToggleMobileMenu
 }) => {
+  const { theme, toggleTheme } = useTheme();
   const tab: NavTab = currentTab || activeTab || 'dashboard';
 
   const getTabTitle = (t: NavTab) => {
@@ -76,6 +78,26 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Actions & Status */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Theme Toggle Button */}
+        <button
+          id="theme-toggle-header-btn"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1d2331] border border-[#364056] text-[#cbd5e1] hover:text-white hover:border-[#8ab4f8] transition-all cursor-pointer shadow-sm active:scale-95 pixel-pill"
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] font-bold hidden sm:inline">Light</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-3.5 h-3.5 text-sky-500" />
+              <span className="text-[11px] font-bold hidden sm:inline">Dark</span>
+            </>
+          )}
+        </button>
+
         {/* Service status indicator strip - Material capsule style */}
         {safeServicesStatus.length > 0 && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1d2331] border border-[#364056]">

@@ -181,25 +181,31 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
     }
   };
 
+  const getMediaFallbackImage = (type: 'tv' | 'movie' | 'music') => {
+    switch (type) {
+      case 'tv':
+        return 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=600&auto=format&fit=crop&q=80';
+      case 'music':
+        return 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80';
+      case 'movie':
+      default:
+        return 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&auto=format&fit=crop&q=80';
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fadeIn">
       {/* Top Banner / Headline */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>
-          <div className="flex items-center gap-2.5 mb-1.5">
+          <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm shadow-cyan-950/40">
               <Sparkles className="w-4 h-4" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
               Forthcoming Releases
             </h1>
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              Next 3 Months
-            </span>
           </div>
-          <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-            Curated premier TV shows, theatrical blockbusters, and studio album drops arriving over the next 90 days. Directly search and monitor within your Arr ecosystem.
-          </p>
         </div>
 
         {/* Action Controls & Refresh */}
@@ -293,7 +299,7 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
             <div className="flex items-center gap-2">
               <Flame className="w-4 h-4 text-amber-400" />
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-                Most Anticipated Across Next 3 Months
+                Most Anticipated Spotlight
               </h2>
             </div>
             <span className="text-xs text-slate-400">Hand-picked blockbusters & major premieres</span>
@@ -311,12 +317,12 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
                   {/* Media Poster & Badge */}
                   <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
                     <img
-                      src={item.posterUrl}
+                      src={item.posterUrl || getMediaFallbackImage(item.mediaType)}
                       alt={item.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80';
+                        (e.target as HTMLImageElement).src = getMediaFallbackImage(item.mediaType);
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0d1016] via-[#0d1016]/40 to-transparent" />
@@ -574,12 +580,12 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
                   {/* Poster Image */}
                   <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
                     <img
-                      src={item.posterUrl}
+                      src={item.posterUrl || getMediaFallbackImage(item.mediaType)}
                       alt={item.title}
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80';
+                        (e.target as HTMLImageElement).src = getMediaFallbackImage(item.mediaType);
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0d1017] via-[#0d1017]/30 to-transparent" />
@@ -698,10 +704,13 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
             {/* Poster Header */}
             <div className="relative aspect-video bg-slate-900 overflow-hidden">
               <img
-                src={selectedItem.posterUrl}
+                src={selectedItem.posterUrl || getMediaFallbackImage(selectedItem.mediaType)}
                 alt={selectedItem.title}
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover object-center"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = getMediaFallbackImage(selectedItem.mediaType);
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0f121a] via-[#0f121a]/50 to-transparent" />
 

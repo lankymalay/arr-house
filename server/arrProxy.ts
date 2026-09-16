@@ -62,6 +62,41 @@ export function getServiceApiUrl(service: ServiceConfig, endpoint: string): stri
   return `${base}${cleanEndpoint}`;
 }
 
+// Generic helper to query an Arr service endpoint
+export async function fetchArr(serviceId: ServiceId, endpoint: string): Promise<any> {
+  const db = getDb();
+  const service = db.settings?.services?.[serviceId];
+  if (!service || !service.apiKey || !service.baseUrl || service.baseUrl.includes('[YOUR_URL]')) {
+    return null;
+  }
+
+  const url = getServiceApiUrl(service, endpoint);
+  if (!url) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 6000);
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'X-Api-Key': service.apiKey.trim(),
+        'Authorization': `Bearer ${service.apiKey.trim()}`,
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+
+    if (res.ok) {
+      return await res.json();
+    }
+    return null;
+  } catch {
+    clearTimeout(timer);
+    return null;
+  }
+}
+
 // Test real service connection
 export async function testServiceConnection(service: ServiceConfig): Promise<{
   success: boolean;

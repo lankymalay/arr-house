@@ -9,9 +9,12 @@ import {
   Settings, 
   LogOut, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
+import { useTheme } from '../context/ThemeContext.js';
 import { PirateShipIcon } from './PirateShipIcon';
 
 export type NavTab = 'dashboard' | 'libraries' | 'search' | 'queue' | 'calendar' | 'external_calendar' | 'settings';
@@ -42,6 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile
 }) => {
   const { user, logout, systemName } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const selectedTab: NavTab = currentTab || activeTab || 'dashboard';
 
   const handleSelectTab = (tab: NavTab) => {
@@ -154,10 +158,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
           <button
+            id="sidebar-theme-toggle-btn"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
+            className="text-[#cbd5e1] hover:text-[#8ab4f8] p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-sky-400" />
+            )}
+          </button>
+          <button
             id="logout-btn"
             onClick={logout}
             title="Sign out"
-            className="text-[#cbd5e1] hover:text-[#ff8a80] p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+            className="text-[#cbd5e1] hover:text-[#ff8a80] p-1.5 rounded-full hover:bg-white/10 transition-colors cursor-pointer pixel-pill"
           >
             <LogOut className="w-4 h-4" />
           </button>
