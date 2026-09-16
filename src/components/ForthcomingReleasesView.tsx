@@ -11,6 +11,7 @@ import {
   Clock,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   Filter,
   Flame,
   Plus,
@@ -59,13 +60,17 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<ExternalReleaseItem | null>(null);
 
+  const PAGE_SIZE = 24;
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
+
   const fetchForthcoming = async (force = false) => {
     if (force) setRefreshing(true);
     else setLoading(true);
 
     try {
       const storedToken = localStorage.getItem('arr_token');
-      const res = await fetch('/api/arr/forthcoming', {
+      const url = force ? '/api/arr/forthcoming?refresh=true' : '/api/arr/forthcoming';
+      const res = await fetch(url, {
         headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {}
       });
       if (res.ok) {
@@ -120,11 +125,74 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
     return dateStr;
   };
 
+  // Group TV shows so each TV show is shown only once and not loads of episodes
+  const processedAllItems = useMemo(() => {
+    if (!data?.all) return [];
+
+    const tvShowsGrouped = new Map<string, ExternalReleaseItem>();
+    const nonTvItems: ExternalReleaseItem[] = [];
+
+    for (const item of data.all) {
+      if (item.mediaType === 'tv') {
+        // Strip out trailing episode codes like "S01E02" so title is just the clean TV show name
+        const cleanShowTitle = (item.seriesOrArtistTitle || item.title.replace(/\s+S\d+E\d+.*$/i, '')).trim();
+        const showKey = cleanShowTitle.toLowerCase();
+        const existing = tvShowsGrouped.get(showKey);
+
+        if (!existing) {
+          tvShowsGrouped.set(showKey, {
+            ...item,
+            title: cleanShowTitle,
+            seriesOrArtistTitle: cleanShowTitle
+          });
+        } else {
+          // Keep earliest upcoming release airdate
+          if (item.date < existing.date) {
+            existing.date = item.date;
+            if (item.status === 'premiering') existing.status = 'premiering';
+            if (item.ratingCount) existing.ratingCount = item.ratingCount;
+            if (item.posterUrl && !existing.posterUrl) existing.posterUrl = item.posterUrl;
+          }
+        }
+      } else {
+        nonTvItems.push(item);
+      }
+    }
+
+    return [...nonTvItems, ...Array.from(tvShowsGrouped.values())];
+  }, [data]);
+
+  // Derived category counts reflecting unique items
+  const categoryCounts = useMemo(() => {
+    if (!processedAllItems.length) {
+      return {
+        total: data?.counts.total || 0,
+        tv: data?.counts.tv || 0,
+        movie: data?.counts.movie || 0,
+        music: data?.counts.music || 0
+      };
+    }
+    const tv = processedAllItems.filter(i => i.mediaType === 'tv').length;
+    const movie = processedAllItems.filter(i => i.mediaType === 'movie').length;
+    const music = processedAllItems.filter(i => i.mediaType === 'music').length;
+    return {
+      total: processedAllItems.length,
+      tv,
+      movie,
+      music
+    };
+  }, [processedAllItems, data]);
+
+  // Reset pagination whenever filters change
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeType, selectedMonthKey, sortBy, searchQuery]);
+
   // Filter and sort items
   const filteredItems = useMemo(() => {
-    if (!data) return [];
+    if (!processedAllItems.length) return [];
 
-    let pool = data.all;
+    let pool = processedAllItems;
 
     // Filter by type
     if (activeType !== 'all') {
@@ -165,7 +233,12 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
         return b.date.localeCompare(a.date);
       }
     });
-  }, [data, activeType, selectedMonthKey, searchQuery, sortBy]);
+  }, [processedAllItems, activeType, selectedMonthKey, searchQuery, sortBy]);
+
+  // Cap visible items to 24 at a time with "Load more"
+  const visibleItems = useMemo(() => {
+    return filteredItems.slice(0, visibleCount);
+  }, [filteredItems, visibleCount]);
 
   const handleSearchAction = (item: ExternalReleaseItem) => {
     if (!onSearchItem) return;
@@ -238,7 +311,7 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
               <span className="font-medium">All Forthcoming</span>
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{data.counts.total}</div>
+            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.total}</div>
             <div className="text-[11px] text-slate-500 mt-0.5">Arriving next 90 days</div>
           </button>
 
@@ -254,7 +327,7 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
               <span className="font-medium">Movies</span>
               <Film className="w-3.5 h-3.5 text-purple-400" />
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{data.counts.movie}</div>
+            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.movie}</div>
             <div className="text-[11px] text-purple-400/80 mt-0.5">Theatrical & streaming</div>
           </button>
 
@@ -270,8 +343,8 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
               <span className="font-medium">TV Shows</span>
               <Tv className="w-3.5 h-3.5 text-blue-400" />
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{data.counts.tv}</div>
-            <div className="text-[11px] text-blue-400/80 mt-0.5">Broadcasts & premieres</div>
+            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.tv}</div>
+            <div className="text-[11px] text-blue-400/80 mt-0.5">Returning & premieres</div>
           </button>
 
           <button
@@ -286,7 +359,7 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
               <span className="font-medium">Music Albums</span>
               <Music className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{data.counts.music}</div>
+            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.music}</div>
             <div className="text-[11px] text-emerald-400/80 mt-0.5">Studio records</div>
           </button>
         </div>
@@ -555,19 +628,25 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-            <span>
-              Showing <strong className="text-slate-200">{filteredItems.length}</strong> forthcoming releases
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400 px-1">
+            <span className="flex items-center gap-1.5 flex-wrap">
+              Showing <strong className="text-white font-bold">{visibleItems.length}</strong> of{' '}
+              <strong className="text-white font-bold">{filteredItems.length}</strong> forthcoming releases
+              {visibleCount < filteredItems.length && (
+                <span className="text-cyan-400/90 font-medium">
+                  • Capped at {PAGE_SIZE} per page
+                </span>
+              )}
             </span>
             {selectedMonthKey !== 'all' && (
-              <span className="text-cyan-400">
+              <span className="text-cyan-400 font-medium">
                 Filtered to {data?.timeframe?.months.find(m => m.key === selectedMonthKey)?.label}
               </span>
             )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredItems.map((item) => {
+            {visibleItems.map((item) => {
               const countdown = getDaysUntil(item.date);
               const targetService = getTargetServiceLabel(item.mediaType);
 
@@ -680,6 +759,30 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
               );
             })}
           </div>
+
+          {/* Load More Pagination */}
+          {visibleCount < filteredItems.length && (
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-6 pb-2">
+              <button
+                id="load-more-releases-btn"
+                onClick={() => setVisibleCount(prev => Math.min(filteredItems.length, prev + PAGE_SIZE))}
+                className="px-6 py-3 rounded-full text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 shadow-lg shadow-cyan-950/40 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <ChevronDown className="w-4 h-4 text-cyan-400" />
+                <span>Load More Releases</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-cyan-500/30 text-white font-semibold">
+                  +{Math.min(PAGE_SIZE, filteredItems.length - visibleCount)} more
+                </span>
+              </button>
+              <button
+                id="show-all-releases-btn"
+                onClick={() => setVisibleCount(filteredItems.length)}
+                className="px-4 py-3 rounded-full text-xs font-semibold bg-[#14171f] hover:bg-[#1e2330] text-slate-300 hover:text-white border border-white/[0.08] transition-all cursor-pointer"
+              >
+                Show All ({filteredItems.length})
+              </button>
+            </div>
+          )}
         </div>
       )}
 

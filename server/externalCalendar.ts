@@ -555,49 +555,86 @@ export async function getExternalForthcomingReleases(
     const fullSchedule = await getTVmazeFullSchedule();
     const matchingEpisodes = fullSchedule.filter(ep => ep.airdate && ep.airdate.startsWith(monthPrefix));
 
-    // Sort by popularity weight and filter
-    const sortedEpisodes = matchingEpisodes
-      .filter(ep => {
-        const show = ep._embedded?.show;
-        if (!show) return false;
-        return (show.weight && show.weight >= 45) || (show.rating?.average && show.rating.average >= 6.5) || ep.number === 1;
-      })
-      .sort((a, b) => (b._embedded?.show?.weight || 0) - (a._embedded?.show?.weight || 0));
+    // Group episodes by TV show so each show is represented once
+    const showGroups = new Map<string, {
+      show: any;
+      earliestEp: any;
+      premiereEp?: any;
+      totalEpisodesThisMonth: number;
+    }>();
 
-    // Cap to top 60 TV items for performance and visual clarity
-    for (const ep of sortedEpisodes.slice(0, 60)) {
+    for (const ep of matchingEpisodes) {
       const show = ep._embedded?.show;
-      if (!show) continue;
+      if (!show || !show.name) continue;
 
-      const seasonStr = String(ep.season || 1).padStart(2, '0');
-      const numberStr = String(ep.number || 1).padStart(2, '0');
-      const episodeCode = `S${seasonStr}E${numberStr}`;
-      const title = `${show.name} ${episodeCode}`;
+      const showKey = (show.id ? String(show.id) : show.name).toLowerCase();
+      const group = showGroups.get(showKey);
+      if (!group) {
+        showGroups.set(showKey, {
+          show,
+          earliestEp: ep,
+          premiereEp: ep.number === 1 ? ep : undefined,
+          totalEpisodesThisMonth: 1
+        });
+      } else {
+        group.totalEpisodesThisMonth += 1;
+        // Keep earliest upcoming airdate
+        if (ep.airdate < group.earliestEp.airdate) {
+          group.earliestEp = ep;
+        }
+        if (ep.number === 1 && !group.premiereEp) {
+          group.premiereEp = ep;
+        }
+      }
+    }
 
-      const uniqueKey = `tv-${show.name.toLowerCase()}-${ep.airdate}`;
+    // Sort distinct shows by popularity weight and filter
+    const sortedShows = Array.from(showGroups.values())
+      .filter(({ show, premiereEp }) => {
+        return (show.weight && show.weight >= 40) || 
+               (show.rating?.average && show.rating.average >= 6.5) || 
+               Boolean(premiereEp);
+      })
+      .sort((a, b) => (b.show.weight || 0) - (a.show.weight || 0));
+
+    // Cap to top 45 distinct TV shows per month
+    for (const { show, earliestEp, premiereEp, totalEpisodesThisMonth } of sortedShows.slice(0, 45)) {
+      const uniqueKey = `tv-${show.name.toLowerCase()}`;
       if (seenKeys.has(uniqueKey)) continue;
       seenKeys.add(uniqueKey);
+
+      const targetEp = premiereEp || earliestEp;
+      const seasonStr = String(targetEp.season || 1).padStart(2, '0');
+      const numberStr = String(targetEp.number || 1).padStart(2, '0');
+      const episodeCode = `S${seasonStr}E${numberStr}`;
 
       const rating = show.rating?.average 
         ? Math.round(show.rating.average * 10) / 10 
         : (show.weight && show.weight > 80 ? 8.5 : 7.8);
 
       const networkName = show.network?.name || show.webChannel?.name || 'TV Broadcast';
-      const summaryText = stripHtml(ep.summary || show.summary || '');
-      const poster = show.image?.medium || show.image?.original || ep.image?.medium || '';
+      const summaryText = stripHtml(show.summary || targetEp.summary || '');
+      const poster = show.image?.medium || show.image?.original || targetEp.image?.medium || '';
+      const isPremiere = targetEp.number === 1;
+
+      const episodeBadge = isPremiere
+        ? `${networkName} • Season ${targetEp.season || 1} Premiere`
+        : totalEpisodesThisMonth > 1
+          ? `${networkName} • Season ${targetEp.season || 1} (${totalEpisodesThisMonth} eps in ${monthPrefix})`
+          : `${networkName} • Next: ${episodeCode}`;
 
       items.push({
-        id: `tvmaze-${ep.id}`,
-        title,
+        id: `tvmaze-show-${show.id || targetEp.id}`,
+        title: show.name, // Grouped: show title only
         seriesOrArtistTitle: show.name,
         mediaType: 'tv',
-        date: ep.airdate,
+        date: targetEp.airdate,
         rating,
-        ratingCount: ep.number === 1 ? `${networkName} • Season Premiere` : `${networkName} • ${ep.name || 'New Episode'}`,
+        ratingCount: episodeBadge,
         genres: show.genres && show.genres.length > 0 ? show.genres : ['Drama'],
-        status: ep.number === 1 ? 'premiering' : 'upcoming',
+        status: isPremiere ? 'premiering' : 'upcoming',
         popularityScore: Math.min(100, show.weight || 80),
-        overview: summaryText || `${show.name} ${episodeCode} airing on ${networkName}.`,
+        overview: summaryText || `${show.name} returning with new episodes on ${networkName}.`,
         posterUrl: poster
       });
     }
@@ -704,9 +741,13 @@ export interface ForthcomingReleasesPayload {
 let threeMonthsCache: { timestamp: number; data: ForthcomingReleasesPayload } | null = null;
 const THREE_MONTHS_CACHE_TTL = 1000 * 60 * 60 * 3; // 3 hours
 
-export async function getTopReleasesNextThreeMonths(): Promise<ForthcomingReleasesPayload> {
+export async function getTopReleasesNextThreeMonths(forceRefresh = false): Promise<ForthcomingReleasesPayload> {
   const now = new Date();
-  if (threeMonthsCache && (now.getTime() - threeMonthsCache.timestamp < THREE_MONTHS_CACHE_TTL)) {
+  if (forceRefresh) {
+    threeMonthsCache = null;
+    monthCache.clear();
+    tvmazeScheduleCache = null;
+  } else if (threeMonthsCache && (now.getTime() - threeMonthsCache.timestamp < THREE_MONTHS_CACHE_TTL)) {
     return threeMonthsCache.data;
   }
 
@@ -743,6 +784,7 @@ export async function getTopReleasesNextThreeMonths(): Promise<ForthcomingReleas
 
   const flatItems = monthlyResults.flat();
   const seenIds = new Set<string>();
+  const seenTvShowKeys = new Set<string>();
   const validUpcoming: ExternalReleaseItem[] = [];
 
   for (const item of flatItems) {
@@ -751,6 +793,14 @@ export async function getTopReleasesNextThreeMonths(): Promise<ForthcomingReleas
 
     // Keep items from today onwards up to 90+ days
     if (item.date >= todayStr && item.date <= endDateStr) {
+      // For TV shows, ensure each TV show is included only once (earliest release date)
+      if (item.mediaType === 'tv') {
+        const showKey = (item.seriesOrArtistTitle || item.title).toLowerCase().trim();
+        if (seenTvShowKeys.has(showKey)) {
+          continue;
+        }
+        seenTvShowKeys.add(showKey);
+      }
       validUpcoming.push(item);
     }
   }

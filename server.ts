@@ -622,7 +622,8 @@ async function startServer() {
   // Top Forthcoming Releases for the Next Three Months (TV, Movies, Music)
   app.get('/api/arr/forthcoming', async (req, res) => {
     try {
-      const data = await getTopReleasesNextThreeMonths();
+      const forceRefresh = req.query.refresh === 'true';
+      const data = await getTopReleasesNextThreeMonths(forceRefresh);
       res.json(data);
     } catch (err: any) {
       console.error('[Forthcoming Releases] Error fetching next 3 months:', err);
