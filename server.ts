@@ -78,6 +78,25 @@ async function startServer() {
   }
 
   // ----------------------------------------------------
+  // System Version & Health
+  // ----------------------------------------------------
+  app.get('/api/version', (req, res) => {
+    try {
+      const now = new Date();
+      res.json({
+        version: '1.0.1',
+        buildTime: now.toISOString(),
+        nodeVersion: process.version,
+        platform: process.platform,
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: Date.now()
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch version' });
+    }
+  });
+
+  // ----------------------------------------------------
   // Auth & User Management Endpoints
   // ----------------------------------------------------
 

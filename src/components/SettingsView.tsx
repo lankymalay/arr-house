@@ -23,6 +23,7 @@ import { useToast } from '../context/ToastContext.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useTheme } from '../context/ThemeContext.js';
 import { ThemeToggleSwitch } from './ThemeToggleSwitch.js';
+import { getBuildInfo } from '../version.js';
 
 interface SettingsViewProps {
   onRefreshStack: () => void;
@@ -739,6 +740,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Automated GHCR Pipeline Ready</span>
                 </span>
+              </div>
+            </div>
+
+            {/* Current Running Build Card */}
+            <div className="mt-4 pt-4 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 font-mono">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="text-slate-300">Installed Container Version:</span>
+                <span className="font-bold text-white bg-black/40 px-2 py-0.5 rounded border border-white/10">
+                  {getBuildInfo().version}
+                </span>
+                <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  b.{getBuildInfo().buildId}
+                </span>
+                <span className="text-slate-400 hidden md:inline text-[11px]">
+                  ({getBuildInfo().formattedDate})
+                </span>
+              </div>
+
+              <div className="text-[11px] text-slate-400">
+                Updates automatically every time TrueNAS pulls the latest container.
               </div>
             </div>
           </div>

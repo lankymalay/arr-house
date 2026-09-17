@@ -430,3 +430,32 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-indigo);
 }
+
+/* Light Mode support for Version Badges & Footer */
+:root[data-theme="light"] #sidebar-version-btn,
+.theme-light #sidebar-version-btn,
+:root[data-theme="light"] #footer-version-btn,
+.theme-light #footer-version-btn,
+:root[data-theme="light"] #sidebar-version-btn-collapsed,
+.theme-light #sidebar-version-btn-collapsed {
+  background-color: var(--theme-bg-card) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+
+:root[data-theme="light"] #sidebar-version-btn:hover,
+.theme-light #sidebar-version-btn:hover,
+:root[data-theme="light"] #footer-version-btn:hover,
+.theme-light #footer-version-btn:hover {
+  background-color: var(--theme-bg-muted) !important;
+  border-color: var(--theme-border-hover) !important;
+  color: var(--theme-text-primary) !important;
+}
+
+:root[data-theme="light"] footer,
+.theme-light footer {
+  background-color: var(--theme-bg-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-text-secondary) !important;
+}
+

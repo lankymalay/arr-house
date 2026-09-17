@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { PirateShipIcon } from './PirateShipIcon';
+import { VersionBadge } from './VersionBadge';
 
 export type NavTab = 'dashboard' | 'libraries' | 'search' | 'queue' | 'calendar' | 'external_calendar' | 'settings';
 
@@ -161,6 +162,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Live TrueNAS Version & Build Tracking */}
+        <VersionBadge variant="sidebar" collapsed={collapsed} />
       </div>
     </div>
   );

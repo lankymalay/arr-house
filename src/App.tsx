@@ -17,6 +17,7 @@ import { SettingsView } from './components/SettingsView.js';
 import { ItemDetailModal } from './components/ItemDetailModal.js';
 import { AddContentModal } from './components/AddContentModal.js';
 import { PirateShipIcon } from './components/PirateShipIcon.js';
+import { VersionBadge } from './components/VersionBadge.js';
 import type { MediaItem, QueueItem, CalendarEvent, ProwlarrIndexer, SearchResultItem, ServiceId } from './types.js';
 
 const VALID_TABS: NavTab[] = [
@@ -358,6 +359,14 @@ const MainLayout: React.FC = () => {
             />
           )}
         </main>
+
+        {/* Bottom Status Footer with TrueNAS Version Tracking */}
+        <footer className="mt-auto px-4 sm:px-6 py-2 border-t border-[#2d3c54] bg-[#121824]/60 backdrop-blur-xs flex items-center justify-between gap-3 text-xs text-slate-400 select-none">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 hidden sm:inline">Arr House</span>
+          </div>
+          <VersionBadge variant="footer" />
+        </footer>
       </div>
 
       {/* Item Detail Inspector Modal */}
