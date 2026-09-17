@@ -21,8 +21,6 @@ import {
 import type { ServiceConfig, ServiceId, User, UserRole } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { useAuth } from '../context/AuthContext.js';
-import { useTheme } from '../context/ThemeContext.js';
-import { ThemeToggleSwitch } from './ThemeToggleSwitch.js';
 import { getBuildInfo } from '../version.js';
 
 interface SettingsViewProps {
@@ -33,7 +31,6 @@ interface SettingsViewProps {
 export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user: propUser }) => {
   const { success, error } = useToast();
   const { user: authUser, isAdmin: authIsAdmin } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const user = propUser || authUser;
   const isAdmin = user ? user.role === 'admin' : authIsAdmin;
 
@@ -328,12 +325,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Theme Quick Toggle Switch */}
-          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-[#151b29] border border-[#26334a]">
-            <span className="text-xs font-semibold text-slate-400">Theme:</span>
-            <ThemeToggleSwitch id="settings-theme-toggle-btn" size="sm" />
-          </div>
-
           {isAdmin && (
             <a
               href="/api/system/export-config"

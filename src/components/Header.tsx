@@ -2,7 +2,6 @@ import React from 'react';
 import { Menu } from 'lucide-react';
 import type { NavTab } from './Sidebar.js';
 import { PirateShipIcon } from './PirateShipIcon.js';
-import { ThemeToggleSwitch } from './ThemeToggleSwitch.js';
 
 interface HeaderProps {
   currentTab?: NavTab;
@@ -77,9 +76,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Actions & Status */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Sliding Theme Toggle Switch */}
-        <ThemeToggleSwitch id="header-theme-toggle" size="md" />
-
         {/* Service status indicator strip */}
         {safeServicesStatus.length > 0 && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#161e2e] border border-[#2d3c54] shadow-sm">
