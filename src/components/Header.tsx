@@ -65,10 +65,10 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3 min-w-0">
           <PirateShipIcon className="w-8 h-8 rounded-2xl shrink-0 md:hidden shadow-md shadow-indigo-950/40" withBadge />
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-semibold text-white tracking-tight truncate font-sans">
+            <h1 className="text-base sm:text-lg font-semibold text-white tracking-tight truncate font-sans header-title">
               {title}
             </h1>
-            <p className="text-xs text-slate-400 truncate hidden md:block">
+            <p className="text-xs text-slate-400 truncate hidden md:block header-subtitle">
               {subtitle}
             </p>
           </div>
