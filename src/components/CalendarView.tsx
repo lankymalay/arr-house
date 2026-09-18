@@ -61,6 +61,44 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
     return filteredEvents.filter(e => e.date === dStr);
   };
 
+  // Group filtered events by date for Schedule/Agenda view
+  const groupedAgendaEvents = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {};
+    const sorted = [...filteredEvents].sort((a, b) => a.date.localeCompare(b.date));
+    for (const ev of sorted) {
+      if (!map[ev.date]) {
+        map[ev.date] = [];
+      }
+      map[ev.date].push(ev);
+    }
+    return Object.entries(map);
+  }, [filteredEvents]);
+
+  const formatScheduleHeader = (dateStr: string) => {
+    try {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const evDate = new Date(y, m - 1, d);
+      const now = new Date();
+      const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffDays = Math.round((evDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      let relative = '';
+      if (diffDays === 0) relative = 'Today';
+      else if (diffDays === 1) relative = 'Tomorrow';
+      else if (diffDays === -1) relative = 'Yesterday';
+      else if (diffDays > 1 && diffDays <= 7) relative = `In ${diffDays} days`;
+
+      const formatted = evDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
+      return { formatted, relative };
+    } catch {
+      return { formatted: dateStr, relative: '' };
+    }
+  };
+
   // Build calendar matrix days
   const calendarDays = [];
   for (let i = 0; i < firstDayIndex; i++) {
@@ -114,46 +152,41 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Calendar Top Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-white tracking-tight font-sans">
-            Library Calendar
-          </h2>
-          <p className="text-xs sm:text-sm text-[#9aa0a6] mt-1">
-            Tracking air dates and release drops for media in your collection.
-          </p>
+      <div className="flex items-center justify-end gap-2 flex-wrap">
+        {/* Subscribe to iCal Feed Button */}
+        <button
+          id="subscribe-calendar-btn"
+          onClick={() => setShowSubscribeModal(true)}
+          className="px-4 py-2 rounded-full bg-[#14171f] hover:bg-[#1a1e28] text-white border border-white/[0.08] text-xs font-bold flex items-center gap-2 transition-all cursor-pointer pixel-pill"
+        >
+          <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
+          <span>Sync iCal Feed</span>
+        </button>
+
+        {/* View toggle capsule (Desktop option for both Month & Agenda) */}
+        <div className="hidden md:flex items-center bg-[#14171f] p-1 rounded-full border border-white/[0.08]">
+          <button
+            onClick={() => setViewMode('month')}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
+              viewMode === 'month' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+            }`}
+          >
+            Month Grid
+          </button>
+          <button
+            onClick={() => setViewMode('agenda')}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
+              viewMode === 'agenda' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+            }`}
+          >
+            Schedule / Agenda
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Subscribe to iCal Feed Button */}
-          <button
-            id="subscribe-calendar-btn"
-            onClick={() => setShowSubscribeModal(true)}
-            className="px-4 py-2 rounded-full bg-[#14171f] hover:bg-[#1a1e28] text-white border border-white/[0.08] text-xs font-bold flex items-center gap-2 transition-all cursor-pointer pixel-pill"
-          >
-            <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
-            <span>Sync iCal Feed</span>
-          </button>
-
-          {/* View toggle capsule */}
-          <div className="flex items-center bg-[#14171f] p-1 rounded-full border border-white/[0.08]">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
-                viewMode === 'month' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
-              }`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setViewMode('agenda')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
-                viewMode === 'agenda' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
-              }`}
-            >
-              Agenda
-            </button>
-          </div>
+        {/* Mobile indicator (Calendar is agenda/schedule on mobile) */}
+        <div className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14171f] border border-white/[0.08] text-[11px] font-medium text-slate-300">
+          <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
+          <span>Schedule View</span>
         </div>
       </div>
 
@@ -229,129 +262,182 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
         </div>
       </div>
 
-      {/* Calendar Views */}
-      {viewMode === 'month' ? (
-        <div className="sonos-card overflow-hidden">
-          {/* Day Names Header */}
-          <div className="grid grid-cols-7 border-b border-white/[0.07] bg-[#0c0e12]/60 text-center py-2.5 text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
-            <div>Sun</div>
-            <div>Mon</div>
-            <div>Tue</div>
-            <div>Wed</div>
-            <div>Thu</div>
-            <div>Fri</div>
-            <div>Sat</div>
-          </div>
-
-          {/* Month Days Grid */}
-          <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-white/[0.05]">
-            {calendarDays.map((day, idx) => {
-              if (day === null) {
-                return (
-                  <div key={`empty-${idx}`} className="bg-[#0c0e12]/30 min-h-[110px] p-2" />
-                );
-              }
-
-              const dayEvents = getDayEvents(day);
-              const isToday = 
-                new Date().getFullYear() === year &&
-                new Date().getMonth() === month &&
-                new Date().getDate() === day;
-
-              return (
-                <div
-                  key={`day-${day}`}
-                  className={`min-h-[120px] p-2 flex flex-col justify-between transition-colors hover:bg-white/[0.02] ${
-                    isToday ? 'bg-white/[0.04]' : ''
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span 
-                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                        isToday 
-                          ? 'bg-white text-black font-extrabold shadow-sm' 
-                          : 'text-[#9aa0a6]'
-                      }`}
-                    >
-                      {day}
-                    </span>
-                    {dayEvents.length > 0 && (
-                      <span className="text-[10px] font-bold text-white bg-white/[0.08] px-2 py-0.5 rounded-full">
-                        {dayEvents.length}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Day Events Stack */}
-                  <div className="space-y-1 overflow-y-auto max-h-[85px] scrollbar-none flex-1">
-                    {dayEvents.map((ev) => {
-                      const style = getServiceStyles(ev.service);
-                      return (
-                        <button
-                          key={ev.id}
-                          onClick={() => setSelectedEvent(ev)}
-                          className={`w-full text-left p-1 rounded-md text-[10px] font-medium border truncate block transition-all hover:scale-[1.02] cursor-pointer ${style.bg}`}
-                          title={`${ev.seriesOrArtistTitle || ev.title} - ${ev.title}`}
-                        >
-                          <div className="flex items-center gap-1 truncate">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
-                            <span className="font-bold truncate">
-                              {ev.seriesOrArtistTitle || ev.title}
+      {/* Agenda/Schedule Content Subcomponent */}
+      {(() => {
+        const renderAgendaScheduleView = () => (
+          <div className="sonos-card p-4 sm:p-6 space-y-6">
+            {groupedAgendaEvents.length === 0 ? (
+              <div className="py-16 text-center text-[#9aa0a6] text-sm font-medium">
+                No scheduled releases match the selected filters.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {groupedAgendaEvents.map(([dateStr, dayEvents]) => {
+                  const { formatted, relative } = formatScheduleHeader(dateStr);
+                  return (
+                    <div key={dateStr} className="space-y-2.5">
+                      {/* Day Group Header */}
+                      <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.08]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
+                            {formatted}
+                          </span>
+                          {relative && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              relative === 'Today' 
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                                : relative === 'Tomorrow' 
+                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40' 
+                                : 'bg-white/10 text-slate-300'
+                            }`}>
+                              {relative}
                             </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : (
-        /* Agenda View */
-        <div className="sonos-card p-6">
-          {filteredEvents.length === 0 ? (
-            <div className="py-16 text-center text-[#9aa0a6] text-sm font-medium">
-              No scheduled releases match the selected filters.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filteredEvents.map((ev) => {
-                const style = getServiceStyles(ev.service);
-                return (
-                  <div
-                    key={ev.id}
-                    onClick={() => setSelectedEvent(ev)}
-                    className="p-4 rounded-2xl bg-[#1a1e28] border border-white/[0.06] flex items-center justify-between gap-4 hover:border-white/20 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`text-[10px] font-medium uppercase px-2.5 py-0.5 rounded-full ${style.badge}`}>
-                        {ev.service}
-                      </span>
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-semibold text-white truncate tracking-tight">
-                          {ev.seriesOrArtistTitle || ev.title}
-                        </h4>
-                        <p className="text-xs text-[#9aa0a6] truncate">
-                          {ev.title}
-                        </p>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {dayEvents.length} {dayEvents.length === 1 ? 'release' : 'releases'}
+                        </span>
+                      </div>
+
+                      {/* Day Events Cards */}
+                      <div className="space-y-2">
+                        {dayEvents.map((ev) => {
+                          const style = getServiceStyles(ev.service);
+                          return (
+                            <div
+                              key={ev.id}
+                              onClick={() => setSelectedEvent(ev)}
+                              className="p-3.5 sm:p-4 rounded-2xl bg-[#1a1e28] hover:bg-[#202634] border border-white/[0.06] hover:border-white/20 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-sm"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full shrink-0 shadow-xs ${style.badge}`}>
+                                  {ev.service}
+                                </span>
+                                <div className="min-w-0">
+                                  <h4 className="text-sm font-semibold text-white truncate tracking-tight group-hover:text-indigo-300 transition-colors">
+                                    {ev.seriesOrArtistTitle || ev.title}
+                                  </h4>
+                                  <p className="text-xs text-[#9aa0a6] truncate mt-0.5">
+                                    {ev.title}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+                                  ev.hasFile 
+                                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                                    : 'bg-[#151a26] text-slate-400 border-white/[0.08]'
+                                }`}>
+                                  {ev.hasFile ? 'Downloaded' : 'Monitored'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
 
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-medium text-white block font-mono">{ev.date}</span>
-                      <span className="text-[10px] text-[#9aa0a6] font-medium">
-                        {ev.hasFile ? 'Downloaded' : 'Monitored'}
+        const renderMonthGrid = () => (
+          <div className="sonos-card overflow-hidden">
+            {/* Day Names Header */}
+            <div className="grid grid-cols-7 border-b border-white/[0.07] bg-[#0c0e12]/60 text-center py-2.5 text-[11px] font-bold uppercase tracking-wider text-[#9aa0a6]">
+              <div>Sun</div>
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+            </div>
+
+            {/* Month Days Grid */}
+            <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-white/[0.05]">
+              {calendarDays.map((day, idx) => {
+                if (day === null) {
+                  return (
+                    <div key={`empty-${idx}`} className="bg-[#0c0e12]/30 min-h-[110px] p-2" />
+                  );
+                }
+
+                const dayEvents = getDayEvents(day);
+                const isToday = 
+                  new Date().getFullYear() === year &&
+                  new Date().getMonth() === month &&
+                  new Date().getDate() === day;
+
+                return (
+                  <div
+                    key={`day-${day}`}
+                    className={`min-h-[120px] p-2 flex flex-col justify-between transition-colors hover:bg-white/[0.02] ${
+                      isToday ? 'bg-white/[0.04]' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span 
+                        className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                          isToday 
+                            ? 'bg-white text-black font-extrabold shadow-sm' 
+                            : 'text-[#9aa0a6]'
+                        }`}
+                      >
+                        {day}
                       </span>
+                      {dayEvents.length > 0 && (
+                        <span className="text-[10px] font-bold text-white bg-white/[0.08] px-2 py-0.5 rounded-full">
+                          {dayEvents.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Day Events Stack */}
+                    <div className="space-y-1 overflow-y-auto max-h-[85px] scrollbar-none flex-1">
+                      {dayEvents.map((ev) => {
+                        const style = getServiceStyles(ev.service);
+                        return (
+                          <button
+                            key={ev.id}
+                            onClick={() => setSelectedEvent(ev)}
+                            className={`w-full text-left p-1 rounded-md text-[10px] font-medium border truncate block transition-all hover:scale-[1.02] cursor-pointer ${style.bg}`}
+                            title={`${ev.seriesOrArtistTitle || ev.title} - ${ev.title}`}
+                          >
+                            <div className="flex items-center gap-1 truncate">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.dot}`} />
+                              <span className="font-bold truncate">
+                                {ev.seriesOrArtistTitle || ev.title}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        );
+
+        return (
+          <>
+            {/* Desktop Calendar View (Month or Agenda based on desktop viewMode toggle) */}
+            <div className="hidden md:block">
+              {viewMode === 'month' ? renderMonthGrid() : renderAgendaScheduleView()}
+            </div>
+
+            {/* Mobile Calendar View (Always Agenda/Schedule View) */}
+            <div className="block md:hidden">
+              {renderAgendaScheduleView()}
+            </div>
+          </>
+        );
+      })()}
 
       {/* Event Details Modal */}
       {selectedEvent && (

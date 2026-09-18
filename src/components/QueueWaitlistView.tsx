@@ -80,14 +80,14 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Sub-tab Navigation - Pixel M3 Segmented Bar */}
-      <div className="flex items-center justify-between gap-4 pb-2 flex-wrap">
-        <div className="inline-flex p-1.5 rounded-full bg-[#14171f] border border-white/[0.08] gap-1">
+      <div className="flex items-center justify-between gap-3 pb-1 overflow-x-auto scrollbar-none flex-nowrap sm:flex-wrap">
+        <div className="inline-flex p-1 sm:p-1.5 rounded-full bg-[#14171f] border border-white/[0.08] gap-1 shrink-0">
           <button
             id="tab-queue"
             onClick={() => setActiveTab('queue')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer pixel-pill shrink-0 ${
               activeTab === 'queue'
                 ? 'bg-white text-black font-bold shadow-sm'
                 : 'text-[#9aa0a6] hover:text-white'
@@ -103,7 +103,7 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
           <button
             id="tab-waitlist"
             onClick={() => setActiveTab('waitlist')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer pixel-pill shrink-0 ${
               activeTab === 'waitlist'
                 ? 'bg-[#e0d0b8] text-[#3e2723] font-bold shadow-sm'
                 : 'text-[#9aa0a6] hover:text-white'
@@ -119,7 +119,7 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
           <button
             id="tab-indexers"
             onClick={() => setActiveTab('indexers')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer pixel-pill shrink-0 ${
               activeTab === 'indexers'
                 ? 'bg-[#b4e3be] text-[#072711] font-bold shadow-sm'
                 : 'text-[#9aa0a6] hover:text-white'
@@ -137,7 +137,7 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
           <button
             onClick={handleTestIndexers}
             disabled={testingIndexers}
-            className="px-4 py-2 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer pixel-pill disabled:opacity-50"
+            className="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer pixel-pill disabled:opacity-50 shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${testingIndexers ? 'animate-spin' : ''}`} />
             <span>Test All Indexers</span>
@@ -147,20 +147,20 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
 
       {/* Tab 1: Active Download Queue - Sonos Audio Playback Style */}
       {activeTab === 'queue' && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {queue.length === 0 ? (
-            <div className="py-20 text-center border border-dashed border-white/10 rounded-3xl bg-[#14171f]/30">
+            <div className="py-16 sm:py-20 text-center border border-dashed border-white/10 rounded-2xl sm:rounded-3xl bg-[#14171f]/30">
               <DownloadCloud className="w-8 h-8 text-[#5f6368] mx-auto mb-2" />
               <p className="text-sm font-medium text-[#9aa0a6]">Queue is currently idle.</p>
               <p className="text-xs text-[#5f6368] mt-1">All monitored media items are up to date.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-2.5 sm:gap-3">
               {queue.map((item) => (
                 <div
                   key={item.id}
                   id={`queue-item-${item.id}`}
-                  className="sonos-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-5 group"
+                  className="sonos-card p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-5 group rounded-2xl"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">

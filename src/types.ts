@@ -198,3 +198,36 @@ export interface AddContentPayload {
   selectedSeasons?: number[];
   selectedEpisodes?: { season: number; episode: number }[];
 }
+
+export interface AlbumTrackItem {
+  id: string | number;
+  trackNumber: number;
+  title: string;
+  durationMs?: number;
+  hasFile?: boolean;
+}
+
+export interface StudioAlbumItem {
+  id: string | number;
+  title: string;
+  year?: number;
+  releaseDate?: string;
+  trackCount: number;
+  coverUrl?: string;
+  genre?: string;
+  albumType?: string;
+  monitored?: boolean;
+  hasFiles?: boolean;
+  overview?: string;
+  tracks?: AlbumTrackItem[];
+}
+
+export interface ArtistDetails {
+  id: string | number;
+  artistName: string;
+  overview?: string;
+  posterUrl?: string;
+  genres?: string[];
+  totalAlbums: number;
+  studioAlbums: StudioAlbumItem[];
+}

@@ -275,32 +275,18 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fadeIn">
-      {/* Top Banner / Headline */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-sm shadow-cyan-950/40">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              Forthcoming Releases
-            </h1>
-          </div>
-        </div>
-
-        {/* Action Controls & Refresh */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <button
-            id="refresh-forthcoming-btn"
-            onClick={() => fetchForthcoming(true)}
-            disabled={loading || refreshing}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-900 border border-white/[0.08] hover:border-cyan-500/30 text-slate-300 hover:text-white transition shadow-sm active:scale-95 disabled:opacity-50"
-            title="Refresh Forthcoming Releases"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
-            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
-        </div>
+      {/* Action Controls & Refresh */}
+      <div className="flex items-center justify-end gap-2 border-b border-white/[0.08] pb-4">
+        <button
+          id="refresh-forthcoming-btn"
+          onClick={() => fetchForthcoming(true)}
+          disabled={loading || refreshing}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-900 border border-white/[0.08] hover:border-cyan-500/30 text-slate-300 hover:text-white transition shadow-sm active:scale-95 disabled:opacity-50"
+          title="Refresh Forthcoming Releases"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
+          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </button>
       </div>
 
       {/* Metric Cards / Quick Category Counters */}

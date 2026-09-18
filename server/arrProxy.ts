@@ -46,8 +46,11 @@ export function getServiceApiUrl(service: ServiceConfig, endpoint: string): stri
   // Check if port already exists in base URL
   const hasPort = /:[0-9]+($|\/)/.test(base);
 
-  // If port is NOT disabled, and port is provided, and not already in URL
-  if (!service.disablePort && service.port && !hasPort) {
+  // If disablePort is true, strip any port if present from base URL (e.g. from copy-paste)
+  if (service.disablePort) {
+    base = base.replace(/:[0-9]+($|\/)/, '$1');
+  } else if (service.port && !hasPort) {
+    // If port is NOT disabled, and port is provided, and not already in URL
     try {
       const u = new URL(base);
       u.port = String(service.port);
@@ -115,8 +118,8 @@ export async function testServiceConnection(service: ServiceConfig): Promise<{
       const primaryEndpoint = service.id === 'prowlarr' ? '/api/v1/system/status' : '/api/v3/system/status';
       const endpointsToTry = [primaryEndpoint];
       if (service.id === 'lidarr') {
-        // Also support /api/v1/system/status and /api/v1/artist as fallbacks if v3 is blocked or legacy
-        endpointsToTry.push('/api/v1/system/status', '/api/system/status', '/api/v3/artist');
+        // Support /api/v1/artist, /api/v1/system/status, and /api/v3/artist as fallbacks
+        endpointsToTry.push('/api/v1/artist', '/api/v1/system/status', '/api/v3/artist', '/api/system/status');
       }
 
       let lastErrorText = '';
@@ -128,7 +131,7 @@ export async function testServiceConnection(service: ServiceConfig): Promise<{
 
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
 
           // Supply both X-Api-Key and Authorization Bearer header for varied reverse proxy/auth setups
           const response = await fetch(url, {
@@ -147,7 +150,7 @@ export async function testServiceConnection(service: ServiceConfig): Promise<{
             const data: any = await response.json();
             return {
               success: true,
-              version: data.version || (Array.isArray(data) ? 'v3.x' : 'v3.x'),
+              version: data.version || (Array.isArray(data) ? 'v1.x / v3.x' : 'v3.x'),
               appName: data.appName || service.name,
               branch: data.branch || 'main',
               latencyMs
@@ -158,14 +161,14 @@ export async function testServiceConnection(service: ServiceConfig): Promise<{
             if (response.status === 401) {
               return {
                 success: false,
-                errorMessage: 'HTTP 401 Unauthorized: Invalid API Key. Check Lidarr Settings -> General -> API Key.',
+                errorMessage: `HTTP 401 Unauthorized: Invalid API Key. Check ${service.name} Settings -> General -> API Key.`,
                 latencyMs
               };
             }
           }
         } catch (e: any) {
           if (e.name === 'AbortError') {
-            lastErrorText = 'Connection timed out (6s)';
+            lastErrorText = 'Connection timed out (10s)';
           } else {
             lastErrorText = e.message || 'Network unreachable';
           }
@@ -209,16 +212,30 @@ export async function getServiceProfilesAndRoots(serviceId: ServiceId): Promise<
 
   if (service && service.apiKey && service.baseUrl && !service.baseUrl.includes('[YOUR_URL]')) {
     try {
-      const qUrl = getServiceApiUrl(service, '/api/v3/qualityprofile');
-      const rUrl = getServiceApiUrl(service, '/api/v3/rootfolder');
+      const qEndpoint = service.id === 'lidarr' ? '/api/v1/qualityprofile' : '/api/v3/qualityprofile';
+      const rEndpoint = service.id === 'lidarr' ? '/api/v1/rootfolder' : '/api/v3/rootfolder';
+      let qUrl = getServiceApiUrl(service, qEndpoint);
+      let rUrl = getServiceApiUrl(service, rEndpoint);
       
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 4000);
+      const timer = setTimeout(() => controller.abort(), 8000);
 
-      const [qRes, rRes] = await Promise.all([
+      let [qRes, rRes] = await Promise.all([
         fetch(qUrl, { headers: { 'X-Api-Key': service.apiKey }, signal: controller.signal }),
         fetch(rUrl, { headers: { 'X-Api-Key': service.apiKey }, signal: controller.signal })
       ]);
+
+      // If Lidarr fails on v1, fallback to v3
+      if (service.id === 'lidarr' && (!qRes.ok || !rRes.ok)) {
+        const v3qUrl = getServiceApiUrl(service, '/api/v3/qualityprofile');
+        const v3rUrl = getServiceApiUrl(service, '/api/v3/rootfolder');
+        const [v3q, v3r] = await Promise.all([
+          fetch(v3qUrl, { headers: { 'X-Api-Key': service.apiKey }, signal: controller.signal }).catch(() => null),
+          fetch(v3rUrl, { headers: { 'X-Api-Key': service.apiKey }, signal: controller.signal }).catch(() => null)
+        ]);
+        if (v3q && v3q.ok) qRes = v3q;
+        if (v3r && v3r.ok) rRes = v3r;
+      }
       clearTimeout(timer);
 
       if (qRes.ok && rRes.ok) {
@@ -256,7 +273,7 @@ async function fetchSonarrSeries(service: ServiceConfig): Promise<MediaItem[]> {
   try {
     const url = getServiceApiUrl(service, '/api/v3/series');
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(url, {
       headers: { 'X-Api-Key': service.apiKey, 'Accept': 'application/json' },
       signal: controller.signal
@@ -315,7 +332,7 @@ async function fetchRadarrMovies(service: ServiceConfig): Promise<MediaItem[]> {
   try {
     const url = getServiceApiUrl(service, '/api/v3/movie');
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(url, {
       headers: { 'X-Api-Key': service.apiKey, 'Accept': 'application/json' },
       signal: controller.signal
@@ -367,16 +384,31 @@ async function fetchLidarrArtists(service: ServiceConfig): Promise<MediaItem[]> 
     return [];
   }
   try {
-    const url = getServiceApiUrl(service, '/api/v3/artist');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
-    const res = await fetch(url, {
-      headers: { 'X-Api-Key': service.apiKey, 'Accept': 'application/json' },
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (!res.ok) return [];
-    const data: any = await res.json();
+    const endpoints = ['/api/v1/artist', '/api/v3/artist'];
+    let data: any = null;
+
+    for (const ep of endpoints) {
+      try {
+        const url = getServiceApiUrl(service, ep);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch(url, {
+          headers: { 'X-Api-Key': service.apiKey, 'Accept': 'application/json' },
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (res.ok) {
+          const parsed = await res.json();
+          if (Array.isArray(parsed)) {
+            data = parsed;
+            break;
+          }
+        }
+      } catch (err: any) {
+        // Try next endpoint if aborted or error
+      }
+    }
+
     if (!Array.isArray(data)) return [];
 
     return data.map((item: any) => {
@@ -450,19 +482,30 @@ export async function getActiveQueue(forceRefresh = false): Promise<QueueItem[]>
   const fetchServiceQueue = async (svc: ServiceConfig, mediaType: 'tv' | 'movie' | 'music'): Promise<QueueItem[]> => {
     if (!svc.enabled || !svc.baseUrl || !svc.apiKey || svc.baseUrl.includes('[YOUR_URL]')) return [];
     try {
-      const endpoint = svc.id === 'sonarr' ? '/api/v3/queue?includeUnknownSeriesItems=true'
-        : svc.id === 'radarr' ? '/api/v3/queue?includeUnknownMovieItems=true'
-        : '/api/v3/queue?includeUnknownArtistItems=true';
-      const url = getServiceApiUrl(svc, endpoint);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(url, {
-        headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!res.ok) return [];
-      const data: any = await res.json();
+      const endpoints = svc.id === 'sonarr' ? ['/api/v3/queue?includeUnknownSeriesItems=true']
+        : svc.id === 'radarr' ? ['/api/v3/queue?includeUnknownMovieItems=true']
+        : ['/api/v1/queue?includeUnknownArtistItems=true', '/api/v3/queue?includeUnknownArtistItems=true'];
+
+      let data: any = null;
+      for (const ep of endpoints) {
+        try {
+          const url = getServiceApiUrl(svc, ep);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(url, {
+            headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if (res.ok) {
+            data = await res.json();
+            break;
+          }
+        } catch {
+          // Fallback to next endpoint
+        }
+      }
+      if (!data) return [];
       const records = data.records || (Array.isArray(data) ? data : []);
       return records.map((r: any) => {
         const size = r.size || 0;
@@ -523,17 +566,34 @@ export async function getCalendarEvents(forceRefresh = false): Promise<CalendarE
   const fetchServiceCalendar = async (svc: ServiceConfig, mediaType: 'tv' | 'movie' | 'music'): Promise<CalendarEvent[]> => {
     if (!svc.enabled || !svc.baseUrl || !svc.apiKey || svc.baseUrl.includes('[YOUR_URL]')) return [];
     try {
-      const endpoint = `/api/v3/calendar?start=${startDate}&end=${endDate}${svc.id === 'sonarr' ? '&includeSeries=true' : ''}`;
-      const url = getServiceApiUrl(svc, endpoint);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(url, {
-        headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      if (!res.ok) return [];
-      const data: any = await res.json();
+      const endpoints = svc.id === 'sonarr'
+        ? [`/api/v3/calendar?start=${startDate}&end=${endDate}&includeSeries=true`]
+        : svc.id === 'radarr'
+        ? [`/api/v3/calendar?start=${startDate}&end=${endDate}`]
+        : [`/api/v1/calendar?start=${startDate}&end=${endDate}`, `/api/v3/calendar?start=${startDate}&end=${endDate}`];
+
+      let data: any = null;
+      for (const endpoint of endpoints) {
+        try {
+          const url = getServiceApiUrl(svc, endpoint);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(url, {
+            headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if (res.ok) {
+            const parsed = await res.json();
+            if (Array.isArray(parsed)) {
+              data = parsed;
+              break;
+            }
+          }
+        } catch {
+          // Fallback to next endpoint
+        }
+      }
       if (!Array.isArray(data)) return [];
 
       return data.map((item: any) => ({
@@ -582,7 +642,7 @@ export async function getProwlarrIndexers(forceRefresh = false): Promise<Prowlar
   try {
     const url = getServiceApiUrl(service, '/api/v1/indexer');
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch(url, {
       headers: { 'X-Api-Key': service.apiKey, 'Accept': 'application/json' },
       signal: controller.signal
@@ -626,53 +686,206 @@ export async function searchContent(query: string, targetService?: ServiceId | '
 
   const db = getDb();
   const services = db.settings.services;
-  const existingLibrary = await getFullLibrary();
+  // Non-blocking in-memory library check for alreadyInLibrary flag
+  const existingTitles = new Set((db.addedLibraryItems || []).map(i => (i.title || '').toLowerCase()));
 
-  const searchInService = async (serviceId: 'sonarr' | 'radarr' | 'lidarr'): Promise<SearchResultItem[]> => {
-    const svc = services[serviceId];
-    if (!svc || !svc.enabled || !svc.baseUrl || !svc.apiKey || svc.baseUrl.includes('[YOUR_URL]')) return [];
-    try {
-      let endpoint = '/api/v3/series/lookup';
-      if (serviceId === 'radarr') endpoint = '/api/v3/movie/lookup';
-      if (serviceId === 'lidarr') endpoint = '/api/v3/artist/lookup';
+  // Dedicated Music Search (Lidarr + iTunes Fallback/Augmentation)
+  const searchMusic = async (): Promise<SearchResultItem[]> => {
+    const svc = services['lidarr'];
+    const results: SearchResultItem[] = [];
 
-      const url = getServiceApiUrl(svc, `${endpoint}?term=${encodeURIComponent(cleanQ)}`);
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 7000);
-      const res = await fetch(url, {
-        headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
-        signal: controller.signal
-      });
-      clearTimeout(timer);
-      if (!res.ok) return [];
-      const rawItems: any = await res.json();
-      if (!Array.isArray(rawItems)) return [];
+    // 1. Try configured Lidarr service first
+    if (svc && svc.enabled && svc.baseUrl && svc.apiKey && !svc.baseUrl.includes('[YOUR_URL]')) {
+      try {
+        const endpoints = [
+          `/api/v1/artist/lookup?term=${encodeURIComponent(cleanQ)}`,
+          `/api/v3/artist/lookup?term=${encodeURIComponent(cleanQ)}`
+        ];
 
-      return rawItems.slice(0, 15).map((item: any) => {
-        const poster = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover')?.remoteUrl;
-        const title = item.title || item.artistName || 'Unknown';
-        return {
-          foreignId: item.tvdbId || item.tmdbId || item.foreignArtistId || item.id,
-          service: serviceId,
-          mediaType: (serviceId === 'sonarr' ? 'tv' : serviceId === 'radarr' ? 'movie' : 'music') as MediaType,
-          title,
-          year: item.year,
-          overview: item.overview || '',
-          posterUrl: poster || '',
-          genres: item.genres || [],
-          alreadyInLibrary: existingLibrary.some(l => l.title.toLowerCase() === title.toLowerCase())
-        };
-      });
-    } catch {
-      return [];
+        let rawArtists: any = null;
+        for (const ep of endpoints) {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 8000);
+            const artistUrl = getServiceApiUrl(svc, ep);
+            const artistRes = await fetch(artistUrl, {
+              headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
+              signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (artistRes.ok) {
+              const parsed = await artistRes.json();
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                rawArtists = parsed;
+                break;
+              }
+            }
+          } catch {
+            // Try next
+          }
+        }
+
+        if (Array.isArray(rawArtists) && rawArtists.length > 0) {
+          for (const item of rawArtists.slice(0, 10)) {
+            const poster = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover')?.remoteUrl;
+            const title = item.artistName || item.title || 'Unknown Artist';
+            results.push({
+              foreignId: item.foreignArtistId || item.id || `lidarr-art-${item.artistName}`,
+              service: 'lidarr',
+              mediaType: 'music',
+              title,
+              authorOrArtist: item.artistName || title,
+              year: item.year,
+              overview: item.overview || `Artist • ${item.genres?.join(', ') || 'Music'}`,
+              posterUrl: poster || '',
+              genres: item.genres || [],
+              alreadyInLibrary: existingTitles.has(title.toLowerCase())
+            });
+          }
+        }
+      } catch (err: any) {
+        console.warn(`Lidarr lookup error: ${err.message}`);
+      }
     }
+
+    // 2. If Lidarr returned no results or is unconfigured/offline, query public iTunes Music API
+    if (results.length === 0) {
+      try {
+        const itunesController = new AbortController();
+        const itunesTimer = setTimeout(() => itunesController.abort(), 3500);
+        const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(cleanQ)}&entity=album,musicArtist&limit=18`;
+        
+        const itunesRes = await fetch(itunesUrl, {
+          headers: { 'Accept': 'application/json' },
+          signal: itunesController.signal
+        });
+        clearTimeout(itunesTimer);
+
+        if (itunesRes.ok) {
+          const data: any = await itunesRes.json();
+          const itunesItems = data.results || [];
+          
+          for (const item of itunesItems) {
+            if (item.wrapperType === 'artist') {
+              const title = item.artistName;
+              results.push({
+                foreignId: `itunes-artist-${item.artistId}`,
+                service: 'lidarr',
+                mediaType: 'music',
+                title,
+                authorOrArtist: item.artistName,
+                overview: `Artist • ${item.primaryGenreName || 'Music'}`,
+                posterUrl: '',
+                genres: [item.primaryGenreName].filter(Boolean),
+                alreadyInLibrary: existingTitles.has(title.toLowerCase())
+              });
+            } else if (item.wrapperType === 'collection') {
+              const title = item.collectionName || item.collectionCensoredName;
+              const artwork = item.artworkUrl100 ? item.artworkUrl100.replace('100x100bb', '600x600bb') : '';
+              const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : undefined;
+              
+              results.push({
+                foreignId: `itunes-album-${item.collectionId}`,
+                service: 'lidarr',
+                mediaType: 'music',
+                title,
+                authorOrArtist: item.artistName,
+                year,
+                overview: `Album by ${item.artistName} • ${item.trackCount || 0} tracks`,
+                posterUrl: artwork,
+                genres: [item.primaryGenreName].filter(Boolean),
+                alreadyInLibrary: existingTitles.has(title.toLowerCase())
+              });
+            }
+          }
+        }
+      } catch (e: any) {
+        console.warn(`iTunes Music fallback search error: ${e.message}`);
+      }
+    }
+
+    return results;
+  };
+
+  // Dedicated TV & Movie Search
+  const searchTvOrMovie = async (serviceId: 'sonarr' | 'radarr'): Promise<SearchResultItem[]> => {
+    const svc = services[serviceId];
+    const results: SearchResultItem[] = [];
+
+    if (svc && svc.enabled && svc.baseUrl && svc.apiKey && !svc.baseUrl.includes('[YOUR_URL]')) {
+      try {
+        const endpoint = serviceId === 'radarr' ? '/api/v3/movie/lookup' : '/api/v3/series/lookup';
+        const url = getServiceApiUrl(svc, `${endpoint}?term=${encodeURIComponent(cleanQ)}`);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3500);
+        
+        const res = await fetch(url, {
+          headers: { 'X-Api-Key': svc.apiKey, 'Accept': 'application/json' },
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+
+        if (res.ok) {
+          const rawItems: any = await res.json();
+          if (Array.isArray(rawItems)) {
+            return rawItems.slice(0, 15).map((item: any) => {
+              const poster = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover')?.remoteUrl;
+              const title = item.title || 'Unknown';
+              return {
+                foreignId: item.tvdbId || item.tmdbId || item.id,
+                service: serviceId,
+                mediaType: (serviceId === 'sonarr' ? 'tv' : 'movie') as MediaType,
+                title,
+                year: item.year,
+                overview: item.overview || '',
+                posterUrl: poster || '',
+                genres: item.genres || [],
+                alreadyInLibrary: existingTitles.has(title.toLowerCase())
+              };
+            });
+          }
+        }
+      } catch {}
+    }
+
+    // Fallback for TV Shows if Sonarr is offline/unconfigured
+    if (serviceId === 'sonarr' && results.length === 0) {
+      try {
+        const tvmazeRes = await fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleanQ)}`);
+        if (tvmazeRes.ok) {
+          const shows: any = await tvmazeRes.json();
+          if (Array.isArray(shows)) {
+            for (const item of shows.slice(0, 10)) {
+              const show = item.show;
+              if (show && show.name) {
+                results.push({
+                  foreignId: `tvmaze-${show.id}`,
+                  service: 'sonarr',
+                  mediaType: 'tv',
+                  title: show.name,
+                  year: show.premiered ? new Date(show.premiered).getFullYear() : undefined,
+                  overview: show.summary ? show.summary.replace(/<[^>]+>/g, '') : '',
+                  posterUrl: show.image?.medium || show.image?.original || '',
+                  genres: show.genres || [],
+                  alreadyInLibrary: existingTitles.has(show.name.toLowerCase())
+                });
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
+    return results;
   };
 
   const tasks: Promise<SearchResultItem[]>[] = [];
   if (targetService === 'all' || !targetService) {
-    tasks.push(searchInService('sonarr'), searchInService('radarr'), searchInService('lidarr'));
-  } else if (targetService !== 'prowlarr') {
-    tasks.push(searchInService(targetService));
+    tasks.push(searchTvOrMovie('sonarr'), searchTvOrMovie('radarr'), searchMusic());
+  } else if (targetService === 'lidarr') {
+    tasks.push(searchMusic());
+  } else if (targetService === 'sonarr' || targetService === 'radarr') {
+    tasks.push(searchTvOrMovie(targetService));
   }
 
   const results = (await Promise.all(tasks)).flat();
@@ -728,7 +941,7 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
           }
         };
       } else if (payload.service === 'lidarr') {
-        endpoint = '/api/v3/artist';
+        endpoint = '/api/v1/artist';
         body = {
           artistName: payload.title,
           qualityProfileId: payload.qualityProfileId,
@@ -741,8 +954,8 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
         };
       }
 
-      const url = getServiceApiUrl(service, endpoint);
-      const res = await fetch(url, {
+      let url = getServiceApiUrl(service, endpoint);
+      let res = await fetch(url, {
         method: 'POST',
         headers: {
           'X-Api-Key': service.apiKey,
@@ -751,6 +964,21 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
         },
         body: JSON.stringify(body)
       });
+
+      // If Lidarr v1 failed with 404, fallback to v3
+      if (payload.service === 'lidarr' && !res.ok && res.status === 404) {
+        endpoint = '/api/v3/artist';
+        url = getServiceApiUrl(service, endpoint);
+        res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Api-Key': service.apiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+      }
 
       if (res.ok) {
         invalidateArrCache();

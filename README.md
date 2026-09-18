@@ -1,123 +1,96 @@
 # Arr House
 
-Unified dashboard for Sonarr, Radarr, Lidarr, and Prowlarr.
+A clean, unified dashboard and management interface for the **\*arr** media stack — including **Sonarr**, **Radarr**, **Lidarr**, and **Prowlarr**.
 
-## Quick Start
+---
 
-### Docker Compose
+## Features
+
+- **Unified Search**: Search across movies, TV series, and music simultaneously from a single bar.
+- **Smart Calendar**: Responsive schedule and agenda view for upcoming episodes, movies, and album releases.
+- **Queue & Activity**: Monitor download clients, live transfer progress, download speeds, and queue health.
+- **Library Management**: Browse your media library with rich artwork and metadata.
+- **Role-Based Accounts**: Multi-user support with admin and standard user permissions.
+- **Dark Mode Aesthetic**: Refined, eye-safe high-contrast dark interface crafted for desktop and mobile.
+
+---
+
+## Deployment & Installation Guides
+
+### 1. Docker Compose (Recommended)
+
+Save the following as `docker-compose.yml`:
 
 ```yaml
 services:
   arr-house:
-    image: arr-house:latest
-    build: .
+    image: ghcr.io/<your-github-or-registry-username>/arr-house:latest
     container_name: arr-house
     restart: unless-stopped
+    pull_policy: always
     ports:
       - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - ARR_DATA_DIR=/app/data
     volumes:
       - ./data:/app/data
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
 ```
 
-Run:
+Start the container:
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
-Access at `http://<your-ip>:3000`.
+Access the interface at `http://<server-ip>:3000`.
 
 ---
 
-### TrueNAS SCALE (1-Click Updates via GitHub Packages / GHCR)
+### 2. TrueNAS SCALE Installation
 
-To get the **"Update Available"** banner and 1-click update button in TrueNAS SCALE, TrueNAS needs to pull a compiled container image from a registry (such as GitHub Container Registry, `ghcr.io`), rather than building locally from source.
+#### TrueNAS SCALE 24.10+ (Electric Eel)
+1. In TrueNAS SCALE, navigate to **Apps** &rarr; **Discover Apps** &rarr; click **Custom App** (or **Install via Docker Compose**).
+2. Paste the `docker-compose.yml` snippet above into the configuration field.
+3. Replace `./data` with your ZFS dataset mount path (e.g., `/mnt/tank/appdata/arr-house:/app/data`).
+4. Click **Save & Install**.
 
-#### Step 1: Enable Automated Builds on GitHub
-This repository includes `.github/workflows/docker-publish.yml`. When you push code to GitHub:
-1. GitHub Actions automatically builds the multi-arch (`amd64` / `arm64`) Docker container and publishes it to `ghcr.io/<your-github-username>/arr-house:latest`.
-2. Ensure the package is public so TrueNAS can pull it without authentication:
-   - On GitHub, go to your repository or profile -> **Packages** -> **arr-house** -> **Package settings**.
-   - Scroll to **Danger Zone** -> **Change package visibility** -> Set to **Public**.
-
----
-
-#### Step 2: Install in TrueNAS SCALE
-
-##### Option A: TrueNAS SCALE 24.10+ (Electric Eel - Docker Compose)
-1. Go to **Apps** -> **Discover Apps** -> **Custom App** (or **Install via Docker Compose**).
-2. Use this Compose configuration:
-
-```yaml
-services:
-  arr-house:
-    image: ghcr.io/<your-github-username>/arr-house:latest
-    container_name: arr-house
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - /mnt/your-pool/appdata/arr-house:/app/data
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-```
-*(Replace `<your-github-username>` and `/mnt/your-pool/appdata/arr-house` with your dataset path).*
-
-##### Option B: TrueNAS SCALE 24.04 (Dragonfish / Cobia - Custom App Form)
-1. Go to **Apps** -> **Discover Apps** -> **Custom App**.
-2. Fill out:
+#### TrueNAS SCALE 24.04 / 23.10 (Dragonfish & Cobia)
+1. Go to **Apps** &rarr; **Discover Apps** &rarr; click **Custom App**.
+2. Fill out the application form:
    - **Application Name**: `arr-house`
-   - **Image repository**: `ghcr.io/<your-github-username>/arr-house`
-   - **Image tag**: `latest`
+   - **Image Repository**: `ghcr.io/<your-registry-username>/arr-house`
+   - **Image Tag**: `latest`
    - **Container Environment Variables**:
      - `PORT`: `3000`
      - `NODE_ENV`: `production`
+     - `ARR_DATA_DIR`: `/app/data`
    - **Port Forwarding**:
-     - Container Port: `3000`
      - Host Port: `3000`
+     - Container Port: `3000`
    - **Storage (Host Path)**:
-     - Host Path: `/mnt/your-pool/appdata/arr-house`
+     - Host Path: `/mnt/tank/appdata/arr-house` (your dataset)
      - Mount Path: `/app/data`
 3. Click **Install**.
 
 ---
 
-#### Step 3: Updating in TrueNAS SCALE
+### 3. Container Updates
 
-> **Note on "Check for Updates":** TrueNAS SCALE's global "Check for Updates" button is *only* displayed for official Catalog apps. For **Custom Apps** using GitHub Docker images, use either:
+Because TrueNAS Custom Apps utilize container images from registries rather than official catalog catalogs:
 
-- **Method A (Easiest for TrueNAS SCALE 24.10+ Electric Eel):**
-  Add `pull_policy: always` to your Compose YAML:
-  ```yaml
-  services:
-    arr-house:
-      image: ghcr.io/<your-github-username>/arr-house:latest
-      pull_policy: always
-  ```
-  Whenever you push a new release to GitHub, simply click the **three dots (`⋮`)** on the Arr House card in TrueNAS -> click **Restart**. TrueNAS will query GitHub, pull the newest image layer, and restart.
-
-- **Method B (All TrueNAS SCALE Versions via "Manage Container Images"):**
-  1. Go to **Apps** in TrueNAS.
-  2. Click the **three dots (`⋮`)** or **Settings** icon in the top right corner -> **Manage Container Images**.
-  3. Locate `ghcr.io/<your-github-username>/arr-house`, click its menu -> **Pull** (or click **Pull Image** at top right).
-  4. Go back to **Installed Apps** and click **Restart** (or **Edit** -> **Save**) on Arr House.
-
-- **Method C (Zero-Touch):**
-  Deploy **Watchtower** on TrueNAS, which automatically polls your GitHub Container Registry and updates containers with zero manual steps.
+- **1-Click Updates (Compose):** If you deployed with `pull_policy: always`, click the **three dots (`⋮`)** on the Arr House card in TrueNAS &rarr; click **Restart**. TrueNAS will query the registry, pull the updated image layers, and restart.
+- **Manual Image Pull:** In TrueNAS, go to **Apps** &rarr; **Manage Container Images** (top-right menu) &rarr; find the image and click **Pull**. Then restart or edit-save the app.
+- **Automated Hands-Free Updates:** Deploy **Watchtower** on your Docker host or TrueNAS instance to automatically update containers whenever a new image is published.
 
 ---
 
-### Local Docker Compose (Build from Source)
+### 4. Build from Source (Node.js Bare Metal)
 
-### Node.js (Bare Metal)
-
-Requires **Node.js 20+**:
+Requires **Node.js 20+** and **npm**:
 
 ```bash
-git clone https://github.com/lankymalay/arr-house.git
+git clone https://github.com/<username>/arr-house.git
 cd arr-house
 npm install
 npm run build
@@ -126,8 +99,12 @@ npm start
 
 ---
 
-## Configuration
+## Initial Configuration
 
-1. Open `http://localhost:3000` to complete initial admin account setup.
-2. Go to **Settings** and add your Sonarr, Radarr, Lidarr, and Prowlarr URLs and API keys (Settings > General > Security in each app).
-3. If using Cloudflare Tunnels or a reverse proxy on standard HTTPS, toggle **Cloudflare Tunnel / Reverse Proxy (Disable Port)** for each service.
+1. Open `http://<your-server>:3000` to create your initial administrator account.
+2. Navigate to **Settings &rarr; Services** to connect your applications:
+   - **Sonarr**: Base URL & API Key (found in Sonarr under *Settings &rarr; General &rarr; Security*)
+   - **Radarr**: Base URL & API Key (found in Radarr under *Settings &rarr; General &rarr; Security*)
+   - **Lidarr**: Base URL & API Key (found in Lidarr under *Settings &rarr; General &rarr; Security*)
+   - **Prowlarr**: Base URL & API Key (found in Prowlarr under *Settings &rarr; General &rarr; Security*)
+3. If connecting through Cloudflare Tunnels or a reverse proxy without exposed ports, toggle **Cloudflare Tunnel / Reverse Proxy (Disable Port)** on the respective service card.

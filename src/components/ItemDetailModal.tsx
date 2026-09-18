@@ -126,24 +126,30 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
             </div>
 
             <div className="min-w-0 pb-1 flex-1">
-              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full shadow-sm ${serviceBadgeClass}`}>
-                  {item.service}
-                </span>
-                <span className="text-xs text-slate-300 font-mono font-bold">{item.year}</span>
-                {item.qualityProfile && (
-                  <span className="text-[10px] text-white bg-white/[0.15] px-2.5 py-0.5 rounded-full border border-white/20 font-medium">
-                    {item.qualityProfile}
-                  </span>
-                )}
-              </div>
-
-              <h2 className="text-xl sm:text-2xl font-extrabold text-white truncate font-sans tracking-tight">
+              {/* Primary content title */}
+              <h2 className="text-xl sm:text-2xl font-black text-white truncate font-sans tracking-tight mb-1" title={item.title}>
                 {item.title}
               </h2>
               {(item.artist || item.author) && (
-                <p className="text-xs text-slate-300 truncate mt-0.5">{item.artist || item.author}</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-300 truncate mb-2">{item.artist || item.author}</p>
               )}
+
+              {/* Secondary metadata: Year, Quality, Service */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-cyan-300 font-sans font-semibold">{item.year || 'Unknown'}</span>
+                <span className="text-slate-500">•</span>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${serviceBadgeClass}`}>
+                  {item.service}
+                </span>
+                {item.qualityProfile && (
+                  <>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-[10px] text-white bg-white/[0.12] px-2 py-0.5 rounded-full border border-white/10 font-medium">
+                      {item.qualityProfile}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

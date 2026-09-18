@@ -15,6 +15,7 @@ import { CalendarView } from './components/CalendarView.js';
 import { ForthcomingReleasesView } from './components/ForthcomingReleasesView.js';
 import { SettingsView } from './components/SettingsView.js';
 import { ItemDetailModal } from './components/ItemDetailModal.js';
+import { ArtistDetailModal } from './components/ArtistDetailModal.js';
 import { AddContentModal } from './components/AddContentModal.js';
 import { PirateShipIcon } from './components/PirateShipIcon.js';
 import { VersionBadge } from './components/VersionBadge.js';
@@ -284,7 +285,6 @@ const MainLayout: React.FC = () => {
           onRefresh={fetchAllData}
           onRefreshData={fetchAllData}
           refreshing={refreshing}
-          servicesStatus={overview?.servicesStatus || []}
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
 
@@ -356,6 +356,7 @@ const MainLayout: React.FC = () => {
           {activeTab === 'settings' && (
             <SettingsView
               onRefreshStack={fetchAllData}
+              servicesStatus={overview?.servicesStatus || []}
             />
           )}
         </main>
@@ -369,13 +370,21 @@ const MainLayout: React.FC = () => {
         </footer>
       </div>
 
-      {/* Item Detail Inspector Modal */}
+      {/* Item Detail Inspector Modal (TV/Movie vs Music Artist) */}
       {selectedMediaItem && (
-        <ItemDetailModal
-          item={selectedMediaItem}
-          onClose={() => setSelectedMediaItem(null)}
-          onRefreshItem={fetchAllData}
-        />
+        selectedMediaItem.service === 'lidarr' || selectedMediaItem.mediaType === 'music' ? (
+          <ArtistDetailModal
+            item={selectedMediaItem}
+            onClose={() => setSelectedMediaItem(null)}
+            onRefreshItem={fetchAllData}
+          />
+        ) : (
+          <ItemDetailModal
+            item={selectedMediaItem}
+            onClose={() => setSelectedMediaItem(null)}
+            onRefreshItem={fetchAllData}
+          />
+        )
       )}
 
       {/* Quick Add Modal */}

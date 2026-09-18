@@ -64,14 +64,14 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
   }, [items]);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
       {/* Media Type Tabs - Pixel M3 Segmented Capsule Row */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="inline-flex p-1.5 rounded-full bg-[#14171f] border border-white/[0.08] gap-1">
+        <div className="inline-flex p-1 sm:p-1.5 rounded-full bg-[#14171f] border border-white/[0.08] gap-1 shrink-0">
           <button
             id="lib-tab-all"
             onClick={() => setSelectedService('all')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
               selectedService === 'all'
                 ? 'bg-white text-[#0c0e12] shadow-sm font-bold'
                 : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
@@ -86,7 +86,7 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
           <button
             id="lib-tab-sonarr"
             onClick={() => setSelectedService('sonarr')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
               selectedService === 'sonarr'
                 ? 'bg-[#a8c7fa] text-[#041e49] shadow-sm font-bold'
                 : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
@@ -102,7 +102,7 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
           <button
             id="lib-tab-radarr"
             onClick={() => setSelectedService('radarr')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
               selectedService === 'radarr'
                 ? 'bg-[#e0d0b8] text-[#3e2723] shadow-sm font-bold'
                 : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
@@ -118,7 +118,7 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
           <button
             id="lib-tab-lidarr"
             onClick={() => setSelectedService('lidarr')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
               selectedService === 'lidarr'
                 ? 'bg-[#b4e3be] text-[#072711] shadow-sm font-bold'
                 : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
@@ -134,7 +134,7 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
       </div>
 
       {/* Filter and Search Bar - Pixel Capsule Style */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#14171f] border border-white/[0.07] p-3 rounded-2xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 bg-[#14171f] border border-white/[0.07] p-2.5 sm:p-3 rounded-2xl">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="w-4 h-4 text-[#9aa0a6] absolute left-4 top-1/2 -translate-y-1/2" />
           <input
@@ -235,7 +235,7 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
           {filteredItems.map((item) => {
             const isDownloaded = item.status === 'downloaded';
             const isMissing = item.status === 'missing';
@@ -256,7 +256,13 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
                 {/* Poster / Thumbnail with service pill */}
                 <div className="aspect-[2/3] w-full bg-[#0c0e12] relative overflow-hidden flex items-center justify-center">
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center text-[#5f6368]">
-                    <Film className="w-8 h-8 mb-1 opacity-30" />
+                    {item.mediaType === 'music' || item.service === 'lidarr' ? (
+                      <Music className="w-8 h-8 mb-1 opacity-30 text-emerald-400" />
+                    ) : item.mediaType === 'tv' || item.service === 'sonarr' ? (
+                      <Tv className="w-8 h-8 mb-1 opacity-30 text-sky-400" />
+                    ) : (
+                      <Film className="w-8 h-8 mb-1 opacity-30 text-amber-400" />
+                    )}
                     <span className="text-[10px] line-clamp-2">{item.title}</span>
                   </div>
                   {item.posterUrl && (
@@ -273,9 +279,9 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e12]/95 via-transparent to-black/30 pointer-events-none z-10" />
 
-                  {/* Service Badge Top Left - Pixel Capsule */}
+                  {/* Service Badge Top Left - Subtle Minimalist Capsule */}
                   <div className="absolute top-2.5 left-2.5 z-20">
-                    <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full shadow ${serviceBadgeClass}`}>
+                    <span className={`text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm backdrop-blur-md ${serviceBadgeClass}`}>
                       {item.service}
                     </span>
                   </div>
@@ -299,36 +305,31 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
                     )}
                   </div>
 
-                  {/* Quality & Year Bottom overlay */}
+                  {/* Year Bottom overlay */}
                   <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-[11px] text-white/90 font-medium z-20 font-mono">
                     <span>{item.year || 'Unknown'}</span>
-                    {item.qualityProfile && (
-                      <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[9px] text-[#e3e6ed] truncate max-w-[90px]">
-                        {item.qualityProfile}
-                      </span>
-                    )}
                   </div>
                 </div>
 
                 {/* Details Footer */}
                 <div className="p-3.5 flex-1 flex flex-col justify-between bg-[#14171f]">
                   <div>
-                    <h4 className="text-xs font-bold text-white line-clamp-1 group-hover:text-[#a8c7fa] transition-colors tracking-tight">
+                    <h4 className="text-sm font-bold text-white line-clamp-1 group-hover:text-cyan-300 transition-colors tracking-tight leading-snug" title={item.title}>
                       {item.title}
                     </h4>
                     {(item.artist || item.author) && (
-                      <p className="text-[11px] text-[#9aa0a6] line-clamp-1 mt-0.5">
+                      <p className="text-xs font-medium text-[#9aa0a6] line-clamp-1 mt-0.5">
                         {item.artist || item.author}
                       </p>
                     )}
                   </div>
 
-                  <div className="mt-2.5 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] text-[#9aa0a6] font-mono">
-                    <span>
+                  <div className="mt-2.5 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-[#9aa0a6] font-mono">
+                    <span className="text-slate-300">
                       {item.episodeFileCount !== undefined ? `${item.episodeFileCount}/${item.episodeCount} Ep` :
                        item.sizeBytes ? formatBytes(item.sizeBytes) : 'Monitored'}
                     </span>
-                    <span className="capitalize text-white/70 font-sans font-medium">{item.status}</span>
+                    <span className="capitalize text-slate-400 font-sans text-[10px] font-medium">{item.status}</span>
                   </div>
                 </div>
               </div>

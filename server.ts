@@ -28,6 +28,7 @@ import {
 import { generateICalFeed } from './server/ical.js';
 import { getExternalForthcomingReleases, getTopReleasesNextThreeMonths } from './server/externalCalendar.js';
 import { getTvShowDetails } from './server/tvDetails.js';
+import { getArtistDetails } from './server/artistDetails.js';
 import type { ServiceId, UserRole } from './src/types.js';
 
 async function startServer() {
@@ -565,6 +566,21 @@ async function startServer() {
       res.json(details);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch TV show details' });
+    }
+  });
+
+  // Artist Details & Studio Albums Breakdown
+  app.get('/api/arr/artist/details', requireAuth, async (req, res) => {
+    const artist = (req.query.artist as string) || (req.query.name as string) || '';
+    const id = req.query.id as string | undefined;
+    if (!artist) {
+      return res.status(400).json({ error: 'Artist name is required' });
+    }
+    try {
+      const details = await getArtistDetails(artist, id);
+      res.json(details);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch artist details' });
     }
   });
 

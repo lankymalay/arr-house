@@ -18,34 +18,42 @@ export const PirateShipIcon: React.FC<PirateShipIconProps> = ({
       aria-hidden="true"
     >
       <defs>
-        {/* Background Badge Gradient - Rich, Clean, Deep Obsidian */}
+        {/* Background Badge Gradient - Luminous Indigo/Slate with subtle contrast */}
         <linearGradient id="tvStackBg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#111726" />
-          <stop offset="100%" stopColor="#080c14" />
+          <stop offset="0%" stopColor="#222b3e" />
+          <stop offset="50%" stopColor="#182030" />
+          <stop offset="100%" stopColor="#0f1522" />
         </linearGradient>
 
-        {/* 1. Sonarr - Clear Vibrant Electric Cyan */}
+        {/* Luminous Outer Border Gradient */}
+        <linearGradient id="tvBadgeBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="50%" stopColor="#38bdf8" />
+          <stop offset="100%" stopColor="#818cf8" />
+        </linearGradient>
+
+        {/* 1. Sonarr - Vivid Electric Cyan */}
         <linearGradient id="sonarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#00d2ff" />
-          <stop offset="100%" stopColor="#0099ff" />
+          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="100%" stopColor="#0284c7" />
         </linearGradient>
 
-        {/* 2. Radarr - Clear Vibrant Warm Amber Gold */}
+        {/* 2. Radarr - Vivid Radiant Amber Gold */}
         <linearGradient id="radarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffc107" />
-          <stop offset="100%" stopColor="#ff9800" />
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#ea580c" />
         </linearGradient>
 
-        {/* 3. Lidarr - Clear Vibrant Vivid Emerald Green */}
+        {/* 3. Lidarr - Vivid Brilliant Emerald Green */}
         <linearGradient id="lidarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#10e070" />
+          <stop offset="0%" stopColor="#34d399" />
           <stop offset="100%" stopColor="#059669" />
         </linearGradient>
 
-        {/* 4. Prowlarr - Clear Vibrant Deep Coral Orange */}
+        {/* 4. Prowlarr - Vivid Rose/Coral Pink */}
         <linearGradient id="prowlarrGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ff6b35" />
-          <stop offset="100%" stopColor="#e63946" />
+          <stop offset="0%" stopColor="#fb7185" />
+          <stop offset="100%" stopColor="#e11d48" />
         </linearGradient>
       </defs>
 
@@ -59,54 +67,55 @@ export const PirateShipIcon: React.FC<PirateShipIconProps> = ({
             x="1"
             y="1"
             rx="15"
-            stroke="#2e3b52"
-            strokeWidth="1.2"
+            stroke="url(#tvBadgeBorder)"
+            strokeWidth="1.6"
+            strokeOpacity="0.75"
             fill="none"
           />
         </>
       )}
 
-      {/* TV Aerial Antenna (High Contrast Silver & Pure White Tips) */}
+      {/* TV Aerial Antenna (Bright White with Luminous Receiver Nodes) */}
       <line
         x1="32"
-        y1="19.5"
-        x2="25"
-        y2="15.2"
-        stroke="#f8fafc"
-        strokeWidth="2"
+        y1="18.5"
+        x2="24"
+        y2="13.5"
+        stroke="#ffffff"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
-      <circle cx="25" cy="15.2" r="1.6" fill="#ffffff" />
+      <circle cx="24" cy="13.5" r="2" fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" />
 
       <line
         x1="32"
-        y1="19.5"
-        x2="39"
-        y2="15.2"
-        stroke="#f8fafc"
-        strokeWidth="2"
+        y1="18.5"
+        x2="40"
+        y2="13.5"
+        stroke="#ffffff"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
-      <circle cx="39" cy="15.2" r="1.6" fill="#ffffff" />
+      <circle cx="40" cy="13.5" r="2" fill="#fbbf24" stroke="#ffffff" strokeWidth="0.8" />
 
-      <circle cx="32" cy="19.5" r="1.8" fill="#94a3b8" />
+      <circle cx="32" cy="18.5" r="2.2" fill="#e2e8f0" />
 
-      {/* Four Stacked Service Blocks (Clear, Vibrant, High-Contrast 36x36 Composition) */}
+      {/* Four Stacked Service Blocks (High-Contrast, Vibrant 40px Wide Composition) */}
       {/* 1. Sonarr (Cyan - TV) */}
-      <rect x="14" y="19.7" width="36" height="6.6" rx="2" fill="url(#sonarrGrad)" />
-      <line x1="16" y1="20.5" x2="48" y2="20.5" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
+      <rect x="12" y="19" width="40" height="7.2" rx="2.5" fill="url(#sonarrGrad)" />
+      <line x1="14" y1="20" x2="50" y2="20" stroke="#ffffff" strokeWidth="0.9" strokeOpacity="0.65" strokeLinecap="round" />
 
       {/* 2. Radarr (Amber Gold - Movies) */}
-      <rect x="14" y="27.6" width="36" height="6.6" rx="2" fill="url(#radarrGrad)" />
-      <line x1="16" y1="28.4" x2="48" y2="28.4" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
+      <rect x="12" y="27.6" width="40" height="7.2" rx="2.5" fill="url(#radarrGrad)" />
+      <line x1="14" y1="28.6" x2="50" y2="28.6" stroke="#ffffff" strokeWidth="0.9" strokeOpacity="0.65" strokeLinecap="round" />
 
       {/* 3. Lidarr (Emerald Green - Music) */}
-      <rect x="14" y="35.5" width="36" height="6.6" rx="2" fill="url(#lidarrGrad)" />
-      <line x1="16" y1="36.3" x2="48" y2="36.3" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
+      <rect x="12" y="36.2" width="40" height="7.2" rx="2.5" fill="url(#lidarrGrad)" />
+      <line x1="14" y1="37.2" x2="50" y2="37.2" stroke="#ffffff" strokeWidth="0.9" strokeOpacity="0.65" strokeLinecap="round" />
 
-      {/* 4. Prowlarr (Deep Coral Orange - Indexers) */}
-      <rect x="14" y="43.4" width="36" height="6.6" rx="2" fill="url(#prowlarrGrad)" />
-      <line x1="16" y1="44.2" x2="48" y2="44.2" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.4" />
+      {/* 4. Prowlarr (Rose/Coral - Indexers) */}
+      <rect x="12" y="44.8" width="40" height="7.2" rx="2.5" fill="url(#prowlarrGrad)" />
+      <line x1="14" y1="45.8" x2="50" y2="45.8" stroke="#ffffff" strokeWidth="0.9" strokeOpacity="0.65" strokeLinecap="round" />
     </svg>
   );
 };

@@ -8,34 +8,33 @@ import {
   FolderTree, 
   Users, 
   Trash2, 
-  Download,
-  Sun,
-  Moon,
-  HardDrive,
-  Terminal,
-  ExternalLink,
-  Copy,
-  Check,
   RefreshCw
 } from 'lucide-react';
 import type { ServiceConfig, ServiceId, User, UserRole } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { useAuth } from '../context/AuthContext.js';
-import { getBuildInfo } from '../version.js';
 
 interface SettingsViewProps {
   onRefreshStack: () => void;
   user?: User | null;
+  servicesStatus?: Array<{ 
+    id: string; 
+    name: string; 
+    status: string; 
+    version?: string; 
+    latencyMs?: number; 
+    port?: number; 
+    disablePort?: boolean;
+  }>;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user: propUser }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user: propUser, servicesStatus = [] }) => {
   const { success, error } = useToast();
   const { user: authUser, isAdmin: authIsAdmin } = useAuth();
   const user = propUser || authUser;
   const isAdmin = user ? user.role === 'admin' : authIsAdmin;
 
-  const [activeTab, setActiveTab] = useState<'services' | 'users' | 'deployment'>('services');
-  const [copiedCompose, setCopiedCompose] = useState(false);
+  const [activeTab, setActiveTab] = useState<'services' | 'users'>('services');
   const [selectedServiceId, setSelectedServiceId] = useState<ServiceId>('sonarr');
   const [services, setServices] = useState<Record<ServiceId, ServiceConfig>>({} as any);
   const [systemName, setSystemName] = useState('Arr House');
@@ -278,14 +277,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
   const currentTestResult = testResults[selectedServiceId];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-3.5 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 max-w-7xl mx-auto">
       {/* Top Nav Tabs - Pixel M3 Segmented Bar */}
-      <div className="flex items-center justify-between gap-4 pb-2 flex-wrap">
-        <div className="inline-flex p-1.5 rounded-full bg-[#151b29] border border-[#26334a] gap-1 shadow-sm">
+      <div className="flex items-center justify-between gap-3 sm:gap-4 pb-1 sm:pb-2 flex-wrap">
+        <div className="inline-flex p-1 sm:p-1.5 rounded-full bg-[#151b29] border border-[#26334a] gap-1 shadow-sm overflow-x-auto max-w-full">
           <button
             id="settings-tab-services"
             onClick={() => setActiveTab('services')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
+            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer pixel-pill shrink-0 ${
               activeTab === 'services'
                 ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-950/40 border border-indigo-400/40'
                 : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
@@ -299,7 +298,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
             <button
               id="settings-tab-users"
               onClick={() => setActiveTab('users')}
-              className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
+              className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer pixel-pill shrink-0 ${
                 activeTab === 'users'
                   ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-950/40 border border-indigo-400/40'
                   : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
@@ -309,45 +308,102 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
               <span>User Accounts</span>
             </button>
           )}
-
-          <button
-            id="settings-tab-deployment"
-            onClick={() => setActiveTab('deployment')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer pixel-pill ${
-              activeTab === 'deployment'
-                ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-950/40 border border-indigo-400/40'
-                : 'text-slate-300 hover:text-white hover:bg-white/[0.08]'
-            }`}
-          >
-            <HardDrive className="w-3.5 h-3.5" />
-            <span>TrueNAS &amp; Docker</span>
-          </button>
         </div>
 
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <a
-              href="/api/system/export-config"
-              download="arr-house-config.json"
-              title="Export configuration backup"
-              className="px-4 py-2 bg-[#14171f] hover:bg-[#1a1e28] text-white text-xs font-bold rounded-full border border-white/[0.08] transition-all flex items-center gap-2 pixel-pill"
-            >
-              <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
-              <span className="hidden sm:inline">Export Backup</span>
-            </a>
-          )}
-
           {activeTab === 'services' && isAdmin && (
             <button
               id="save-settings-btn"
               onClick={handleSaveSettings}
               disabled={saving}
-              className="px-5 py-2 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full shadow transition-all flex items-center gap-2 cursor-pointer pixel-pill disabled:opacity-50"
+              className="px-4 sm:px-5 py-2 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full shadow transition-all flex items-center gap-2 cursor-pointer pixel-pill disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
               <span>{saving ? 'Saving...' : 'Save Settings'}</span>
             </button>
           )}
+        </div>
+      </div>
+
+      {/* 4 Stack Services Live Status Panel (Moved from Header to Settings) */}
+      <div className="bg-[#121824] border border-[#2d3c54] rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Stack Services Status
+            </h2>
+          </div>
+          <button
+            onClick={() => {
+              fetchSettings();
+              onRefreshStack();
+            }}
+            title="Refresh stack status"
+            className="text-xs text-indigo-400 hover:text-white flex items-center gap-1.5 px-3 py-1 rounded-full hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill font-medium"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Refresh Status</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+          {(['sonarr', 'radarr', 'lidarr', 'prowlarr'] as ServiceId[]).map((id) => {
+            const svc = services[id];
+            const liveStatus = servicesStatus?.find(s => s.id === id);
+            const isConnected = liveStatus?.status === 'connected' || svc?.status === 'connected';
+            const isError = liveStatus?.status === 'error' || svc?.status === 'error';
+            const isSelected = activeTab === 'services' && selectedServiceId === id;
+
+            const name = id === 'sonarr' ? 'Sonarr' : id === 'radarr' ? 'Radarr' : id === 'lidarr' ? 'Lidarr' : 'Prowlarr';
+            const role = id === 'sonarr' ? 'TV Shows' : id === 'radarr' ? 'Movies' : id === 'lidarr' ? 'Music' : 'Indexers';
+            
+            return (
+              <button
+                key={id}
+                id={`settings-status-${id}`}
+                onClick={() => {
+                  setActiveTab('services');
+                  setSelectedServiceId(id);
+                }}
+                className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[84px] ${
+                  isSelected
+                    ? 'bg-[#1c263a] border-indigo-500/80 shadow-md shadow-indigo-950/30 ring-1 ring-indigo-500/50'
+                    : 'bg-[#161e2e] border-[#26334a] hover:border-[#3a4c6e] hover:bg-[#1a2336]'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-bold text-sm text-white capitalize truncate">{name}</span>
+                    <span className="text-[10px] text-slate-400 hidden sm:inline">({role})</span>
+                  </div>
+                  {/* Status Light Dot */}
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      isConnected
+                        ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                        : isError
+                        ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+                        : 'bg-slate-500'
+                    }`}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-300 font-mono mt-auto pt-1">
+                  <span className={`text-[11px] font-semibold capitalize font-sans ${
+                    isConnected ? 'text-emerald-400' : isError ? 'text-rose-400' : 'text-slate-400'
+                  }`}>
+                    {isConnected ? 'Connected' : isError ? 'Offline' : 'Standby'}
+                  </span>
+                  {liveStatus?.latencyMs ? (
+                    <span className="text-[10px] text-slate-400">{liveStatus.latencyMs}ms</span>
+                  ) : svc?.port ? (
+                    <span className="text-[10px] text-slate-400">:{svc.port}</span>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -460,7 +516,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
                       id={`input-base-url-${currentService.id}`}
                       type="text"
                       value={currentService.baseUrl}
-                      onChange={(e) => handleUpdateServiceField('baseUrl', e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleUpdateServiceField('baseUrl', val);
+                        // If typing https:// and no port is in the host, auto-check useSsl and disablePort for tunnel/reverse proxy convenience
+                        if (val.startsWith('https://') && !/:[0-9]+($|\/)/.test(val)) {
+                          handleUpdateServiceField('useSsl', true);
+                          handleUpdateServiceField('disablePort', true);
+                        }
+                      }}
                       placeholder="e.g. https://sonarr.yourdomain.com or http://192.168.1.100"
                       className="w-full px-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 font-medium"
                     />
@@ -701,226 +765,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onRefreshStack, user
                   )}
                 </div>
               ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TrueNAS SCALE & Docker Deployment Tab */}
-      {activeTab === 'deployment' && (
-        <div className="space-y-6">
-          {/* Header Banner */}
-          <div className="theme-card p-6 border-indigo-500/30 shadow-md">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300 shadow-sm">
-                  <HardDrive className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-extrabold text-white tracking-tight">
-                    TrueNAS SCALE Installation &amp; 1-Click Updates
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Configure TrueNAS SCALE to monitor GitHub for new releases and update with a single click.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 shadow-sm">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Automated GHCR Pipeline Ready</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Current Running Build Card */}
-            <div className="mt-4 pt-4 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span className="text-slate-300">Installed Container Version:</span>
-                <span className="font-bold text-white bg-black/40 px-2 py-0.5 rounded border border-white/10">
-                  {getBuildInfo().version}
-                </span>
-                <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  b.{getBuildInfo().buildId}
-                </span>
-                <span className="text-slate-400 hidden md:inline text-[11px]">
-                  ({getBuildInfo().formattedDate})
-                </span>
-              </div>
-
-              <div className="text-[11px] text-slate-400">
-                Updates automatically every time TrueNAS pulls the latest container.
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left 2 Cols: Step-by-Step TrueNAS instructions */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Step 1 */}
-              <div className="theme-card p-6 space-y-3">
-                <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-[11px] text-indigo-300 font-extrabold">1</span>
-                  <span>GitHub Automated Build &amp; Container Registry</span>
-                </div>
-                <h4 className="text-sm font-bold text-white">How TrueNAS Detects GitHub Updates</h4>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  TrueNAS SCALE cannot update directly from raw Git source code—it checks container registries (like GitHub Container Registry, <code className="text-indigo-300 font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded">ghcr.io</code>) for newer image digests.
-                </p>
-                <div className="bg-[#10141e] p-3.5 rounded-2xl border border-[#26334a] text-xs text-slate-200 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span>This repo already includes <code className="text-indigo-300 font-mono">.github/workflows/docker-publish.yml</code> which builds and pushes multi-architecture images (<span className="font-mono text-cyan-300">amd64 / arm64</span>) automatically when you push code or tags.</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span><strong>Ensure Package Visibility is Public:</strong> On GitHub, navigate to your repository or user profile &gt; <strong>Packages</strong> &gt; <strong>arr-house</strong> &gt; <strong>Package settings</strong> &gt; <strong>Change visibility</strong> &gt; select <strong>Public</strong>. This allows TrueNAS to query and pull updates without needing API keys.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 2: Electric Eel & Dragonfish */}
-              <div className="theme-card p-6 space-y-4">
-                <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-[11px] text-indigo-300 font-extrabold">2</span>
-                  <span>Install in TrueNAS SCALE</span>
-                </div>
-
-                {/* 24.10 Option */}
-                <div className="p-4 rounded-2xl bg-[#10141e] border border-[#26334a] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-sky-400 uppercase tracking-wider">TrueNAS SCALE 24.10+ (Electric Eel)</span>
-                    <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold">Native Docker Compose</span>
-                  </div>
-                  <ol className="list-decimal list-inside text-xs text-slate-300 space-y-1.5 pl-1 leading-relaxed">
-                    <li>In TrueNAS, go to <strong>Apps</strong> &gt; <strong>Discover Apps</strong> &gt; click <strong>Custom App</strong> (or <strong>Install via Docker Compose</strong>).</li>
-                    <li>Paste the Docker Compose template from the right sidebar.</li>
-                    <li>Update your volume path to your desired ZFS dataset (e.g. <code className="text-slate-200 font-mono">/mnt/tank/appdata/arr-house</code>).</li>
-                    <li>Click <strong>Save &amp; Install</strong>.</li>
-                  </ol>
-                </div>
-
-                {/* 24.04 Option */}
-                <div className="p-4 rounded-2xl bg-[#10141e] border border-[#26334a] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">TrueNAS SCALE 24.04 / 23.10 (Dragonfish / Cobia)</span>
-                    <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">Custom App Form</span>
-                  </div>
-                  <ol className="list-decimal list-inside text-xs text-slate-300 space-y-1.5 pl-1 leading-relaxed">
-                    <li>Go to <strong>Apps</strong> &gt; <strong>Discover Apps</strong> &gt; <strong>Custom App</strong>.</li>
-                    <li><strong>Application Name:</strong> <code className="text-white font-mono">arr-house</code></li>
-                    <li><strong>Image repository:</strong> <code className="text-white font-mono">ghcr.io/&lt;your-username&gt;/arr-house</code> (Image tag: <code className="text-white font-mono">latest</code>).</li>
-                    <li><strong>Port Forwarding:</strong> Host Port <code className="text-white font-mono">3000</code> &rarr; Container Port <code className="text-white font-mono">3000</code>.</li>
-                    <li><strong>Storage (Host Path):</strong> Set Host Path to your dataset and Mount Path to <code className="text-white font-mono">/app/data</code>.</li>
-                  </ol>
-                </div>
-              </div>
-
-              {/* Step 3: Updating Custom Apps */}
-              <div className="theme-card p-6 space-y-4">
-                <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-[11px] text-indigo-300 font-extrabold">3</span>
-                  <span>How to Update Custom Apps in TrueNAS (Where to find the option)</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200">
-                  <strong>Why "Check for Updates" is missing:</strong> TrueNAS SCALE's global "Check for Updates" button is <em>only</em> shown for official Catalog apps. For <strong>Custom Apps</strong> using GitHub Docker images, use one of the two standard methods below:
-                </div>
-
-                <div className="space-y-3">
-                  {/* Method A */}
-                  <div className="p-4 rounded-2xl bg-[#10141e] border border-[#26334a] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">Method A: With <code>pull_policy: always</code> (Easiest for 24.10+)</span>
-                      <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold">Recommended</span>
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      In the Compose template below, we included <code className="text-indigo-300 font-mono">pull_policy: always</code>. Whenever a new version is pushed to GitHub, you simply click the <strong>three dots (&vellip;)</strong> on the Arr House app card in TrueNAS &rarr; click <strong>Restart</strong>. TrueNAS will query GitHub, pull the newest image layer, and restart automatically.
-                    </p>
-                  </div>
-
-                  {/* Method B */}
-                  <div className="p-4 rounded-2xl bg-[#10141e] border border-[#26334a] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white uppercase tracking-wider">Method B: "Manage Container Images" (All TrueNAS Versions)</span>
-                    </div>
-                    <ol className="list-decimal list-inside text-xs text-slate-300 space-y-1 pl-1 leading-relaxed">
-                      <li>In TrueNAS, go to <strong>Apps</strong>.</li>
-                      <li>In the top right corner, click the <strong>three dots (&vellip;)</strong> or <strong>Settings</strong> button &rarr; select <strong>Manage Container Images</strong>.</li>
-                      <li>Find <code className="text-slate-200 font-mono">ghcr.io/&lt;username&gt;/arr-house</code> in the list, click its <strong>&vellip;</strong> menu &rarr; click <strong>Pull</strong> (or click <strong>Pull Image</strong> at the top right).</li>
-                      <li>Go back to <strong>Installed Apps</strong>, click <strong>Restart</strong> (or click <strong>Edit</strong> and then <strong>Save</strong>) on Arr House to apply the new image.</li>
-                    </ol>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right 1 Col: Docker Compose Snippet */}
-            <div className="space-y-6">
-              <div className="theme-card p-6 flex flex-col justify-between h-full">
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                      docker-compose.yml
-                    </span>
-                    <button
-                      onClick={() => {
-                        const snippet = `services:
-  arr-house:
-    image: ghcr.io/<your-github-username>/arr-house:latest
-    pull_policy: always
-    container_name: arr-house
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - ARR_DATA_DIR=/app/data
-    volumes:
-      - /mnt/tank/appdata/arr-house:/app/data`;
-                        navigator.clipboard.writeText(snippet);
-                        setCopiedCompose(true);
-                        success('Copied to Clipboard', 'docker-compose.yml ready to paste in TrueNAS');
-                        setTimeout(() => setCopiedCompose(false), 2500);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-sm transition-all cursor-pointer pixel-pill"
-                    >
-                      {copiedCompose ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedCompose ? 'Copied!' : 'Copy YAML'}</span>
-                    </button>
-                  </div>
-
-                  <pre className="p-4 rounded-2xl bg-[#0e121a] border border-[#26334a] font-mono text-[11px] text-slate-200 leading-relaxed overflow-x-auto select-all">
-{`services:
-  arr-house:
-    image: ghcr.io/<your-github-username>/arr-house:latest
-    pull_policy: always
-    container_name: arr-house
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000
-      - NODE_ENV=production
-      - ARR_DATA_DIR=/app/data
-    volumes:
-      - /mnt/tank/appdata/arr-house:/app/data`}
-                  </pre>
-                  <p className="text-[11px] text-slate-400 mt-2">
-                    Replace <code className="text-indigo-300">&lt;your-github-username&gt;</code> and <code className="text-indigo-300">/mnt/tank/appdata/arr-house</code> with your TrueNAS pool path.
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-[#26334a] space-y-2 text-xs text-slate-300">
-                  <div className="font-bold text-white">Need zero-touch background updates?</div>
-                  <p className="text-[11px] text-slate-400">
-                    Install <strong>Watchtower</strong> from the TrueNAS app catalog or docker compose. It will monitor GitHub Container Registry on a schedule and automatically update without needing any manual clicks.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </div>

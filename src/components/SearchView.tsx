@@ -80,16 +80,9 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Search Header - Pixel Search Widget & Sonos Precision Hardware */}
+      {/* Search Bar Container */}
       <div className="sonos-card p-6 sm:p-8 relative overflow-hidden">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl font-semibold text-white tracking-tight font-sans">
-            Search Media & Indexers
-          </h2>
-          <p className="text-xs sm:text-sm text-[#9aa0a6] mt-1.5 mb-6">
-            Search Sonarr, Radarr, and Lidarr indexers with automated grab dispatch.
-          </p>
-
           {/* Pixel Search Capsule Bar */}
           <div className="relative flex items-center">
             <Search className="w-5 h-5 text-[#9aa0a6] absolute left-5 pointer-events-none" />

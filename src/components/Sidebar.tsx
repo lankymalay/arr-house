@@ -9,7 +9,8 @@ import {
   Settings, 
   LogOut, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { PirateShipIcon } from './PirateShipIcon';
@@ -91,6 +92,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
+
+          {onCloseMobile && (
+            <button
+              id="close-mobile-menu-btn"
+              onClick={onCloseMobile}
+              title="Close menu"
+              aria-label="Close navigation menu"
+              className="md:hidden text-slate-300 hover:text-white p-2 rounded-xl bg-white/[0.04] hover:bg-white/10 transition-colors flex items-center justify-center cursor-pointer border border-[#2d3c54]/60"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Material 3 Pill Navigation List */}
@@ -104,7 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 id={`nav-${item.id}`}
                 onClick={() => handleSelectTab(item.id)}
                 title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full font-medium text-sm transition-all duration-200 relative cursor-pointer pixel-pill ${
+                className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full font-medium text-sm min-h-[44px] transition-all duration-200 relative cursor-pointer pixel-pill ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 via-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-950/40 border border-indigo-400/40 sidebar-nav-active'
                     : 'text-slate-200 hover:text-white hover:bg-white/[0.08] sidebar-nav-inactive'
@@ -187,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
             onClick={onCloseMobile} 
           />
-          <div className="relative w-64 max-w-[80vw] h-full bg-[#10141e] border-r border-[#26334a] shadow-2xl z-10 flex flex-col">
+          <div className="relative w-72 max-w-[85vw] h-full bg-[#10141e] border-r border-[#26334a] shadow-2xl z-10 flex flex-col">
             {sidebarContent}
           </div>
         </div>

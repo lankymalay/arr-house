@@ -110,41 +110,44 @@ export function getDb(): DatabaseSchema {
     try {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       dbCache = JSON.parse(raw);
+
+      // Auto-sanitize existing service configurations:
+      // If service baseUrl starts with https:// and has no explicit port, or if disablePort was intended, ensure disablePort is correctly set
+      if (dbCache && dbCache.settings && dbCache.settings.services) {
+        let changed = false;
+        for (const key of Object.keys(dbCache.settings.services) as ServiceId[]) {
+          const s = dbCache.settings.services[key];
+          if (s && s.baseUrl) {
+            // If baseUrl is https without a port specified in the URL or port is already 443/80
+            const hasExplicitPort = /:[0-9]+($|\/)/.test(s.baseUrl);
+            if (s.baseUrl.startsWith('https://') && !hasExplicitPort && !s.disablePort) {
+              s.disablePort = true;
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          saveDb(dbCache);
+        }
+      }
+
       return dbCache!;
     } catch (err) {
       console.error('[Arr House DB] Error reading database file, recreating default:', err);
     }
   }
 
-  const { hash, salt } = hashPassword('admin123');
-  const defaultAdmin: StoredUser = {
-    id: 'admin-root',
-    username: 'admin',
-    passwordHash: hash,
-    salt,
-    role: 'admin',
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString()
-  };
-
-  const defaultSession: StoredSession = {
-    token: 'arr-default-admin-token',
-    userId: 'admin-root',
-    createdAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-  };
-
   const initial: DatabaseSchema = {
     version: 1,
-    initialized: true,
+    initialized: false,
     settings: {
       services: DEFAULT_SERVICES,
       demoMode: false,
       calendarToken: crypto.randomBytes(16).toString('hex'),
       systemName: 'Arr House'
     },
-    users: [defaultAdmin],
-    sessions: [defaultSession],
+    users: [],
+    sessions: [],
     addedLibraryItems: []
   };
 
