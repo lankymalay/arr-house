@@ -7,7 +7,6 @@ import { Sidebar, NavTab } from './components/Sidebar.js';
 import { Header } from './components/Header.js';
 import { FirstRunWizard } from './components/FirstRunWizard.js';
 import { LoginView } from './components/LoginView.js';
-import { DashboardView } from './components/DashboardView.js';
 import { LibrariesView } from './components/LibrariesView.js';
 import { QueueWaitlistView } from './components/QueueWaitlistView.js';
 import { SearchView } from './components/SearchView.js';
@@ -20,9 +19,9 @@ import { AddContentModal } from './components/AddContentModal.js';
 import { PirateShipIcon } from './components/PirateShipIcon.js';
 import { VersionBadge } from './components/VersionBadge.js';
 import type { MediaItem, QueueItem, CalendarEvent, ProwlarrIndexer, SearchResultItem, ServiceId } from './types.js';
+import { prefetchImages, prefetchApi } from './utils/prefetch.js';
 
 const VALID_TABS: NavTab[] = [
-  'dashboard',
   'libraries',
   'search',
   'queue',
@@ -32,7 +31,7 @@ const VALID_TABS: NavTab[] = [
 ];
 
 function getTabFromUrl(): NavTab {
-  if (typeof window === 'undefined') return 'dashboard';
+  if (typeof window === 'undefined') return 'libraries';
   const raw = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim();
   if (raw === 'forthcoming' || raw === 'forthcoming-releases' || raw === 'forthcoming_releases') {
     return 'external_calendar';
@@ -40,7 +39,7 @@ function getTabFromUrl(): NavTab {
   if (VALID_TABS.includes(raw as NavTab)) {
     return raw as NavTab;
   }
-  return 'dashboard';
+  return 'libraries';
 }
 
 function getQueryParam(key: string): string | null {
@@ -196,6 +195,13 @@ const MainLayout: React.FC = () => {
       if (ovData) setOverview(ovData);
       if (medData && Array.isArray(medData.items)) {
         setMediaItems(medData.items);
+
+        // Preload top library posters into browser memory cache
+        const posters = medData.items.slice(0, 24).map((i: any) => i.posterUrl).filter(Boolean);
+        prefetchImages(posters, 4);
+
+        // Warm forthcoming releases endpoint on idle
+        prefetchApi('/api/arr/forthcoming');
       }
       if (qData && Array.isArray(qData.queue)) {
         setQueue(qData.queue);
@@ -290,17 +296,6 @@ const MainLayout: React.FC = () => {
 
         {/* Dynamic Views */}
         <main className="flex-1 overflow-y-auto">
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              overview={overview}
-              queue={queue}
-              calendar={calendarEvents}
-              indexers={indexers}
-              onNavigate={(tab) => navigateToTab(tab)}
-              onOpenAddModal={() => navigateToTab('search')}
-            />
-          )}
-
           {activeTab === 'libraries' && (
             <LibrariesView
               items={mediaItems}

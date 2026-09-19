@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import type { MediaItem, ServiceId } from '../types.js';
 import type { NavTab } from './Sidebar.js';
+import { MediaPoster } from './MediaPoster.js';
+import { prefetchImage } from '../utils/prefetch.js';
 
 interface LibrariesViewProps {
   items: MediaItem[];
@@ -236,7 +238,7 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
-          {filteredItems.map((item) => {
+          {filteredItems.map((item, index) => {
             const isDownloaded = item.status === 'downloaded';
             const isMissing = item.status === 'missing';
             const isDownloading = item.status === 'downloading';
@@ -251,32 +253,25 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
                 key={`${item.service}-${item.id}`}
                 id={`media-card-${item.id}`}
                 onClick={() => onSelectItem(item)}
+                onMouseEnter={() => {
+                  if (item.posterUrl) prefetchImage(item.posterUrl);
+                }}
                 className="group bg-[#14171f] border border-white/[0.07] hover:border-white/[0.18] rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-xl cursor-pointer flex flex-col"
               >
                 {/* Poster / Thumbnail with service pill */}
                 <div className="aspect-[2/3] w-full bg-[#0c0e12] relative overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center text-[#5f6368]">
-                    {item.mediaType === 'music' || item.service === 'lidarr' ? (
-                      <Music className="w-8 h-8 mb-1 opacity-30 text-emerald-400" />
-                    ) : item.mediaType === 'tv' || item.service === 'sonarr' ? (
-                      <Tv className="w-8 h-8 mb-1 opacity-30 text-sky-400" />
-                    ) : (
-                      <Film className="w-8 h-8 mb-1 opacity-30 text-amber-400" />
-                    )}
-                    <span className="text-[10px] line-clamp-2">{item.title}</span>
-                  </div>
-                  {item.posterUrl && (
-                    <img
-                      src={item.posterUrl}
-                      alt={item.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 relative z-10"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  )}
+                  <MediaPoster
+                    src={item.posterUrl}
+                    alt={item.title}
+                    title={item.title}
+                    artistOrAuthor={item.artist || item.author}
+                    year={item.year}
+                    mediaType={item.mediaType}
+                    service={item.service}
+                    aspectRatio="poster"
+                    priority={index < 12}
+                    className="w-full h-full"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e12]/95 via-transparent to-black/30 pointer-events-none z-10" />
 
                   {/* Service Badge Top Left - Subtle Minimalist Capsule */}

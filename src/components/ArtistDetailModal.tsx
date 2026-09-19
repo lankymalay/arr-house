@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { MediaItem, ArtistDetails, StudioAlbumItem } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
+import { MediaPoster } from './MediaPoster.js';
 
 interface ArtistDetailModalProps {
   item: MediaItem;
@@ -120,19 +121,17 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
           <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-end gap-5">
             {/* Artist Thumbnail / Avatar */}
             <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#0a0d14] overflow-hidden shrink-0 border-2 border-emerald-500/30 shadow-2xl relative group flex items-center justify-center">
-              {item.posterUrl ? (
-                <img
-                  src={item.posterUrl}
-                  alt={artistName}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full bg-emerald-950/40 flex flex-col items-center justify-center text-emerald-400">
-                  <Disc3 className="w-10 h-10 animate-spin-slow" />
-                </div>
-              )}
-              <div className="absolute bottom-1.5 right-1.5 p-1 rounded-full bg-black/70 backdrop-blur-xs text-emerald-400">
+              <MediaPoster
+                src={item.posterUrl}
+                alt={artistName}
+                title={artistName}
+                mediaType="music"
+                service="lidarr"
+                aspectRatio="square"
+                priority={true}
+                className="w-full h-full"
+              />
+              <div className="absolute bottom-1.5 right-1.5 p-1 rounded-full bg-black/70 backdrop-blur-xs text-emerald-400 z-10">
                 <Music className="w-3.5 h-3.5" />
               </div>
             </div>
@@ -301,19 +300,16 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
                     >
                       {/* Album Cover */}
                       <div className="aspect-square w-full rounded-xl bg-[#0c0f17] overflow-hidden relative mb-2.5 shadow-md flex items-center justify-center">
-                        {album.coverUrl ? (
-                          <img
-                            src={album.coverUrl}
-                            alt={album.title}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 bg-[#121622]">
-                            <Disc3 className="w-8 h-8 mb-1 opacity-40 text-emerald-400" />
-                            <span className="text-[10px] text-slate-500 px-2 text-center line-clamp-1">{album.title}</span>
-                          </div>
-                        )}
+                        <MediaPoster
+                          src={album.coverUrl}
+                          alt={album.title}
+                          title={album.title}
+                          artistOrAuthor={artistName}
+                          mediaType="music"
+                          service="lidarr"
+                          aspectRatio="square"
+                          className="w-full h-full"
+                        />
 
                         {/* Year pill overlay */}
                         {album.year && (

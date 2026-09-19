@@ -19,6 +19,7 @@ import {
   addContentToService,
   getActiveQueue,
   removeQueueItem,
+  getDownloadHistory,
   getWaitlistItems,
   getProwlarrIndexers,
   getCalendarEvents,
@@ -29,6 +30,7 @@ import { generateICalFeed } from './server/ical.js';
 import { getExternalForthcomingReleases, getTopReleasesNextThreeMonths } from './server/externalCalendar.js';
 import { getTvShowDetails } from './server/tvDetails.js';
 import { getArtistDetails } from './server/artistDetails.js';
+import { resolveArtistArtwork, warmArtistArtwork } from './server/artistArtwork.js';
 import type { ServiceId, UserRole } from './src/types.js';
 
 async function startServer() {
@@ -630,6 +632,104 @@ async function startServer() {
     res.json({ indexers });
   });
 
+  // Download History (Latest 10 downloads)
+  app.get('/api/arr/history', requireAuth, async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const history = await getDownloadHistory(limit);
+      res.json({ history });
+    } catch (err: any) {
+      console.error('[History] Failed to get download history:', err);
+      res.status(500).json({ error: 'Failed to retrieve download history' });
+    }
+  });
+
+  // Media Cover Proxy for Sonarr, Radarr, Lidarr
+  app.get('/api/arr/media-cover', async (req, res) => {
+    const serviceId = req.query.service as ServiceId;
+    const coverPath = req.query.path as string;
+    const artistName = (req.query.artist as string) || (req.query.title as string) || '';
+
+    if (!serviceId || !coverPath) {
+      if (artistName) {
+        const fallback = await resolveArtistArtwork(artistName);
+        if (fallback) return res.redirect(302, fallback);
+      }
+      return res.status(400).send('Service and path are required');
+    }
+
+    const db = getDb();
+    const svc = db.settings.services[serviceId];
+    if (!svc || !svc.enabled || !svc.baseUrl || !svc.apiKey || svc.baseUrl.includes('[YOUR_URL]')) {
+      if (artistName) {
+        const fallback = await resolveArtistArtwork(artistName);
+        if (fallback) return res.redirect(302, fallback);
+      }
+      return res.status(404).send('Service not configured');
+    }
+
+    try {
+      const fullUrl = getServiceApiUrl(svc, coverPath);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
+      const upstreamRes = await fetch(fullUrl, {
+        headers: {
+          'X-Api-Key': svc.apiKey,
+          Accept: 'image/*,*/*'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      const contentType = upstreamRes.headers.get('content-type') || '';
+
+      // If upstream failed or returned non-image (e.g. Lidarr returns HTML on reverse proxy paths)
+      if (!upstreamRes.ok || !contentType.startsWith('image/')) {
+        if (artistName || serviceId === 'lidarr') {
+          const fallback = await resolveArtistArtwork(artistName);
+          if (fallback) {
+            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            return res.redirect(302, fallback);
+          }
+        }
+        return res.status(upstreamRes.status || 404).send('Cover not found');
+      }
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+
+      const arrayBuffer = await upstreamRes.arrayBuffer();
+      res.send(Buffer.from(arrayBuffer));
+    } catch (err: any) {
+      console.warn(`[MediaCover Proxy] Failed to fetch cover for ${serviceId} ${coverPath}:`, err.message);
+      if (artistName) {
+        const fallback = await resolveArtistArtwork(artistName);
+        if (fallback) return res.redirect(302, fallback);
+      }
+      res.status(502).send('Error fetching media cover');
+    }
+  });
+
+  // Direct High-Resolution Artist Artwork Endpoint
+  app.get('/api/arr/artist/artwork', async (req, res) => {
+    const artist = (req.query.artist as string) || (req.query.name as string) || (req.query.title as string) || '';
+    if (!artist) {
+      return res.status(400).send('Artist parameter required');
+    }
+    try {
+      const artUrl = await resolveArtistArtwork(artist);
+      if (artUrl) {
+        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+        return res.redirect(302, artUrl);
+      }
+      res.status(404).send('Artist artwork not found');
+    } catch (err: any) {
+      console.warn(`[ArtistArtwork] Error resolving artwork for "${artist}":`, err.message);
+      res.status(500).send('Error resolving artist artwork');
+    }
+  });
+
   // Test Indexer
   app.post('/api/arr/indexers/test', requireAuth, (req, res) => {
     res.json({ success: true, message: 'Indexer connection verified. Latency: 92ms' });
@@ -766,6 +866,28 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[Arr House] Server listening on http://0.0.0.0:${PORT}`);
+
+    // Preload forthcoming releases & warm library, queue, calendar and artist artwork in background
+    setTimeout(() => {
+      getTopReleasesNextThreeMonths(false).catch(err => {
+        console.warn('[Arr House] Forthcoming releases background pre-warm error:', err);
+      });
+
+      getFullLibrary(false).then(items => {
+        const artists = items
+          .filter(i => i.mediaType === 'music' || i.service === 'lidarr')
+          .map(i => i.artist || i.title)
+          .filter(Boolean);
+        if (artists.length > 0) {
+          warmArtistArtwork(artists).catch(e => {
+            console.warn('[Arr House] Artist artwork warm error:', e);
+          });
+        }
+      }).catch(() => {});
+
+      getActiveQueue(false).catch(() => {});
+      getCalendarEvents(false).catch(() => {});
+    }, 1200);
   });
 }
 

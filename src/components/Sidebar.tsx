@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  LayoutDashboard, 
   Film, 
   Search, 
   Calendar as CalendarIcon, 
@@ -15,8 +14,9 @@ import {
 import { useAuth } from '../context/AuthContext.js';
 import { PirateShipIcon } from './PirateShipIcon';
 import { VersionBadge } from './VersionBadge';
+import { prefetchApi } from '../utils/prefetch.js';
 
-export type NavTab = 'dashboard' | 'libraries' | 'search' | 'queue' | 'calendar' | 'external_calendar' | 'settings';
+export type NavTab = 'libraries' | 'search' | 'queue' | 'calendar' | 'external_calendar' | 'settings';
 
 interface SidebarProps {
   currentTab?: NavTab;
@@ -44,7 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile
 }) => {
   const { user, logout, systemName } = useAuth();
-  const selectedTab: NavTab = currentTab || activeTab || 'dashboard';
+  const selectedTab: NavTab = currentTab || activeTab || 'libraries';
 
   const handleSelectTab = (tab: NavTab) => {
     if (onSelectTab) onSelectTab(tab);
@@ -53,7 +53,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const navItems: { id: NavTab; label: string; icon: React.FC<{ className?: string }>; badge?: number }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'libraries', label: 'Libraries', icon: Film },
     { id: 'search', label: 'Search', icon: Search },
     { id: 'queue', label: 'Queue & Activity', icon: DownloadCloud, badge: queueCount },
@@ -116,6 +115,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.id}
                 id={`nav-${item.id}`}
                 onClick={() => handleSelectTab(item.id)}
+                onMouseEnter={() => {
+                  if (item.id === 'external_calendar') prefetchApi('/api/arr/forthcoming');
+                  else if (item.id === 'queue') prefetchApi('/api/arr/queue');
+                  else if (item.id === 'calendar') prefetchApi('/api/arr/calendar');
+                  else if (item.id === 'libraries') prefetchApi('/api/arr/library');
+                }}
                 title={collapsed ? item.label : undefined}
                 className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-full font-medium text-sm min-h-[44px] transition-all duration-200 relative cursor-pointer pixel-pill ${
                   isActive

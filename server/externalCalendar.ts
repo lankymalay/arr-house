@@ -54,7 +54,7 @@ const VERIFIED_TENTPOLE_MOVIES: {
   // 2026 Major Cinematic Releases
   {
     title: 'Resident Evil',
-    date: '2026-09-18',
+    date: '2026-09-25',
     genres: ['Action', 'Horror', 'Sci-Fi'],
     overview: 'A new cinematic adaptation expanding the iconic survivor horror franchise with high-stakes bioweapon threats.',
     rating: 8.4,
@@ -62,7 +62,7 @@ const VERIFIED_TENTPOLE_MOVIES: {
   },
   {
     title: 'Practical Magic 2',
-    date: '2026-09-10',
+    date: '2026-10-09',
     genres: ['Fantasy', 'Comedy', 'Drama'],
     overview: 'The Owens sisters reunite for a spellbinding continuation steeped in family bonds and ancient witchcraft.',
     rating: 8.2,

@@ -28,6 +28,7 @@ import type {
   AddContentPayload 
 } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
+import { MediaPoster } from './MediaPoster.js';
 
 interface AddContentModalProps {
   item: SearchResultItem | null;
@@ -363,18 +364,18 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
         {/* Header with media summary */}
         <div className="relative p-5 sm:p-6 border-b border-white/[0.07] flex items-start gap-4 shrink-0 bg-[#0c0e12]/60">
           <div className="w-16 h-24 rounded-2xl bg-[#0c0e12] overflow-hidden shrink-0 border border-white/[0.08] shadow-md">
-            {item.posterUrl ? (
-              <img
-                src={item.posterUrl}
-                alt={item.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[#5f6368] text-xs">
-                No image
-              </div>
-            )}
+            <MediaPoster
+              src={item.posterUrl}
+              alt={item.title}
+              title={item.title}
+              artistOrAuthor={item.authorOrArtist}
+              year={item.year}
+              mediaType={item.mediaType}
+              service={item.service}
+              aspectRatio="custom"
+              priority={true}
+              className="w-full h-full"
+            />
           </div>
 
           <div className="flex-1 min-w-0">

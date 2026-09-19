@@ -36,7 +36,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
           </div>
           <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
           <p className="text-sm text-slate-400 max-w-md mb-6">
-            {this.state.error?.message || 'An unexpected rendering error occurred in the dashboard.'}
+            {this.state.error?.message || 'An unexpected rendering error occurred.'}
           </p>
           <div className="flex gap-3">
             <button

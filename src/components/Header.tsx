@@ -20,12 +20,10 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onToggleMobileMenu
 }) => {
-  const tab: NavTab = currentTab || activeTab || 'dashboard';
+  const tab: NavTab = currentTab || activeTab || 'libraries';
 
   const getTabTitle = (t: NavTab) => {
     switch (t) {
-      case 'dashboard':
-        return { title: 'Dashboard', subtitle: 'Real-time overview of media ecosystem' };
       case 'libraries':
         return { title: 'Libraries', subtitle: 'Browse TV shows, movies, and music' };
       case 'search':
@@ -61,8 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-xl shrink-0 md:hidden flex items-center justify-center bg-gradient-to-br from-[#242e42] to-[#161c28] p-0.5 shadow-md shadow-black/40 ring-1 ring-white/20">
-            <PirateShipIcon className="w-full h-full" withBadge />
+          <div className="shrink-0 md:hidden">
+            <PirateShipIcon className="w-9 h-9 rounded-2xl shadow-md shadow-black/50 ring-1 ring-[#2d3c54]" withBadge />
           </div>
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-semibold text-white tracking-tight truncate font-sans header-title">

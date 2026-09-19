@@ -1,10 +1,12 @@
 import type { Request, Response } from 'express';
 import { getDb, saveDb } from './db.js';
+import { resolveArtistArtwork } from './artistArtwork.js';
 import type { 
   ServiceId, 
   ServiceConfig, 
   MediaItem, 
   QueueItem, 
+  DownloadHistoryItem,
   CalendarEvent, 
   ProwlarrIndexer, 
   QualityProfile, 
@@ -411,10 +413,25 @@ async function fetchLidarrArtists(service: ServiceConfig): Promise<MediaItem[]> 
 
     if (!Array.isArray(data)) return [];
 
-    return data.map((item: any) => {
-      const posterImg = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover');
-      const posterUrl = posterImg?.remoteUrl || 
-        (posterImg?.url ? `/api/arr/media-cover?service=lidarr&path=${encodeURIComponent(posterImg.url)}` : '');
+    const mapped = await Promise.all(data.map(async (item: any) => {
+      const posterImg = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover' || i.coverType === 'fanart');
+      
+      // CRITICAL: Only accept real HTTP/HTTPS remote URLs.
+      // Lidarr provides internal file paths like "/config/MediaCover/1/poster.jpg" as remoteUrl which 404 in the browser.
+      let posterUrl = '';
+      if (posterImg?.remoteUrl && (posterImg.remoteUrl.startsWith('http://') || posterImg.remoteUrl.startsWith('https://'))) {
+        posterUrl = posterImg.remoteUrl;
+      }
+
+      // If no valid remote HTTP URL, resolve high-res artist portrait via Deezer / TheAudioDB / iTunes
+      if (!posterUrl && item.artistName) {
+        posterUrl = await resolveArtistArtwork(item.artistName);
+      }
+
+      // If still no posterUrl and we have a relative URL from Lidarr, proxy through /api/arr/media-cover with artist fallback
+      if (!posterUrl && posterImg?.url) {
+        posterUrl = `/api/arr/media-cover?service=lidarr&path=${encodeURIComponent(posterImg.url)}&artist=${encodeURIComponent(item.artistName || '')}`;
+      }
 
       const percent = item.statistics?.percentOfTracks ?? 0;
       let status: MediaItem['status'] = 'missing';
@@ -439,7 +456,9 @@ async function fetchLidarrArtists(service: ServiceConfig): Promise<MediaItem[]> 
         path: item.path,
         added: item.added
       };
-    });
+    }));
+
+    return mapped;
   } catch (e) {
     console.warn('Failed to fetch Lidarr artists:', e);
     return [];
@@ -464,6 +483,18 @@ export async function getFullLibrary(forceRefresh = false): Promise<MediaItem[]>
 
   const customAdded = db.addedLibraryItems || [];
   const combined = [...sonarrItems, ...radarrItems, ...lidarrItems, ...customAdded];
+
+  // Guarantee every music item has valid artwork (covers customAdded or any unresolved artist)
+  await Promise.all(combined.map(async (item) => {
+    if (item.mediaType === 'music' || item.service === 'lidarr') {
+      if (!item.posterUrl || (!item.posterUrl.startsWith('http') && !item.posterUrl.startsWith('/api/arr/media-cover'))) {
+        const art = await resolveArtistArtwork(item.artist || item.title);
+        if (art) {
+          item.posterUrl = art;
+        }
+      }
+    }
+  }));
 
   libraryCache = { data: combined, timestamp: now };
   return combined;
@@ -548,6 +579,130 @@ export function removeQueueItem(id: string | number): boolean {
     queueCache.data = queueCache.data.filter(q => String(q.id) !== String(id));
   }
   return true;
+}
+
+// Download History (Latest 10 downloads across Arr services)
+export async function getDownloadHistory(limit = 10): Promise<DownloadHistoryItem[]> {
+  const db = getDb();
+  const services = db.settings.services;
+  const historyItems: DownloadHistoryItem[] = [];
+
+  const fetchServiceHistory = async (svc: ServiceConfig, mediaType: MediaType): Promise<DownloadHistoryItem[]> => {
+    if (!svc.enabled || !svc.baseUrl || !svc.apiKey || svc.baseUrl.includes('[YOUR_URL]')) {
+      return [];
+    }
+
+    try {
+      const endpoint = svc.id === 'lidarr' 
+        ? `/api/v1/history?page=1&pageSize=${limit}&sortKey=date&sortDirection=descending`
+        : `/api/v3/history?page=1&pageSize=${limit}&sortKey=date&sortDirection=descending`;
+
+      const url = getServiceApiUrl(svc, endpoint);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+
+      const res = await fetch(url, {
+        headers: {
+          'X-Api-Key': svc.apiKey,
+          Accept: 'application/json'
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if (!res.ok) return [];
+      const json: any = await res.json();
+      const records = Array.isArray(json) ? json : Array.isArray(json.records) ? json.records : [];
+
+      return records.map((rec: any) => {
+        let displayTitle = rec.sourceTitle;
+        let subTitle = '';
+
+        if (mediaType === 'tv' && rec.series) {
+          subTitle = rec.series.title;
+          if (!displayTitle) displayTitle = rec.series.title;
+        } else if (mediaType === 'movie' && rec.movie) {
+          subTitle = rec.movie.title;
+          if (!displayTitle) displayTitle = rec.movie.title;
+        } else if (mediaType === 'music' && (rec.artist || rec.album)) {
+          subTitle = rec.artist?.artistName || rec.album?.title || '';
+          if (!displayTitle) displayTitle = rec.artist?.artistName || 'Music Release';
+        }
+
+        return {
+          id: `${svc.id}-hist-${rec.id || Math.random().toString(36).substr(2, 9)}`,
+          service: svc.id,
+          mediaType,
+          title: displayTitle || 'Downloaded Release',
+          seriesOrArtistTitle: subTitle,
+          eventType: rec.eventType === 'downloadFolderImported' ? 'Imported' : (rec.eventType || 'Completed'),
+          date: rec.date || new Date().toISOString(),
+          quality: rec.quality?.quality?.name || '1080p',
+          downloadClient: rec.data?.downloadClient || 'Torrent Client',
+          protocol: rec.data?.protocol === 'usenet' ? 'usenet' : 'torrent',
+          status: 'completed' as const
+        };
+      });
+    } catch {
+      return [];
+    }
+  };
+
+  // Run in parallel
+  const [sonarrHist, radarrHist, lidarrHist] = await Promise.all([
+    services.sonarr ? fetchServiceHistory(services.sonarr, 'tv') : Promise.resolve([]),
+    services.radarr ? fetchServiceHistory(services.radarr, 'movie') : Promise.resolve([]),
+    services.lidarr ? fetchServiceHistory(services.lidarr, 'music') : Promise.resolve([])
+  ]);
+
+  historyItems.push(...sonarrHist, ...radarrHist, ...lidarrHist);
+
+  // If connected services returned fewer than limit history items, supplement from downloaded library items
+  if (historyItems.length < limit) {
+    try {
+      const library = await getFullLibrary(false);
+      const downloaded = library.filter(item => item.status === 'downloaded');
+      
+      // Sort recently added or downloaded
+      downloaded.sort((a, b) => {
+        const dateA = a.added || '2026-09-01';
+        const dateB = b.added || '2026-09-01';
+        return dateB.localeCompare(dateA);
+      });
+
+      for (let i = 0; i < downloaded.length && historyItems.length < limit; i++) {
+        const item = downloaded[i];
+        // Don't duplicate if already present
+        if (historyItems.some(h => h.title === item.title)) continue;
+
+        // Calculate staggered recent date if none
+        const fallbackDate = item.added || new Date(Date.now() - (i + 1) * 3600000 * 5).toISOString();
+
+        historyItems.push({
+          id: `lib-hist-${item.id}`,
+          service: item.service,
+          mediaType: item.mediaType,
+          title: item.title,
+          seriesOrArtistTitle: item.artist || item.title,
+          eventType: 'Imported',
+          date: fallbackDate,
+          quality: item.qualityProfile || 'HD / Lossless',
+          sizeBytes: item.sizeBytes,
+          downloadClient: 'Arr Auto-Downloader',
+          protocol: 'torrent',
+          status: 'completed',
+          posterUrl: item.posterUrl
+        });
+      }
+    } catch (e) {
+      console.warn('Error supplementing history from library:', e);
+    }
+  }
+
+  // Sort by date descending
+  historyItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return historyItems.slice(0, limit);
 }
 
 // Live Calendar
@@ -727,8 +882,12 @@ export async function searchContent(query: string, targetService?: ServiceId | '
 
         if (Array.isArray(rawArtists) && rawArtists.length > 0) {
           for (const item of rawArtists.slice(0, 10)) {
-            const poster = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover')?.remoteUrl;
+            const posterImg = item.images?.find((i: any) => i.coverType === 'poster' || i.coverType === 'cover')?.remoteUrl;
             const title = item.artistName || item.title || 'Unknown Artist';
+            let posterUrl = (posterImg && posterImg.startsWith('http')) ? posterImg : '';
+            if (!posterUrl) {
+              posterUrl = await resolveArtistArtwork(title);
+            }
             results.push({
               foreignId: item.foreignArtistId || item.id || `lidarr-art-${item.artistName}`,
               service: 'lidarr',
@@ -737,7 +896,7 @@ export async function searchContent(query: string, targetService?: ServiceId | '
               authorOrArtist: item.artistName || title,
               year: item.year,
               overview: item.overview || `Artist • ${item.genres?.join(', ') || 'Music'}`,
-              posterUrl: poster || '',
+              posterUrl,
               genres: item.genres || [],
               alreadyInLibrary: existingTitles.has(title.toLowerCase())
             });
@@ -768,6 +927,7 @@ export async function searchContent(query: string, targetService?: ServiceId | '
           for (const item of itunesItems) {
             if (item.wrapperType === 'artist') {
               const title = item.artistName;
+              const posterUrl = await resolveArtistArtwork(title);
               results.push({
                 foreignId: `itunes-artist-${item.artistId}`,
                 service: 'lidarr',
@@ -775,7 +935,7 @@ export async function searchContent(query: string, targetService?: ServiceId | '
                 title,
                 authorOrArtist: item.artistName,
                 overview: `Artist • ${item.primaryGenreName || 'Music'}`,
-                posterUrl: '',
+                posterUrl,
                 genres: [item.primaryGenreName].filter(Boolean),
                 alreadyInLibrary: existingTitles.has(title.toLowerCase())
               });

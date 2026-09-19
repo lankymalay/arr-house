@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   DownloadCloud, 
   Clock, 
@@ -6,10 +6,18 @@ import {
   Trash2, 
   RefreshCw, 
   CheckCircle2, 
-  Search
+  Search,
+  History,
+  HardDrive,
+  FileCheck2,
+  Tv,
+  Film,
+  Music
 } from 'lucide-react';
-import type { QueueItem, MediaItem, ProwlarrIndexer } from '../types.js';
+import type { QueueItem, MediaItem, ProwlarrIndexer, DownloadHistoryItem } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
+import { MediaPoster } from './MediaPoster.js';
+import { prefetchImage } from '../utils/prefetch.js';
 
 interface QueueWaitlistViewProps {
   queue: QueueItem[];
@@ -24,10 +32,40 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
   waitlist,
   indexers,
   onRefresh,
+  onSelectItem,
 }) => {
   const { success, error, info } = useToast();
-  const [activeTab, setActiveTab] = useState<'queue' | 'waitlist' | 'indexers'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'history' | 'waitlist' | 'indexers'>('queue');
   const [testingIndexers, setTestingIndexers] = useState(false);
+  const [historyItems, setHistoryItems] = useState<DownloadHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const token = localStorage.getItem('arr_token');
+      const res = await fetch('/api/arr/history?limit=10', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setHistoryItems(json.history || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const handleRefreshAll = () => {
+    onRefresh();
+    fetchHistory();
+  };
 
   const formatBytes = (bytes: number) => {
     if (!bytes || bytes === 0) return '0 B';
@@ -97,6 +135,22 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
             <span>Active Transfers</span>
             <span className={`px-2 py-0.2 rounded-full text-[10px] ${activeTab === 'queue' ? 'bg-black/15 text-black' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
               {queue.length}
+            </span>
+          </button>
+
+          <button
+            id="tab-history"
+            onClick={() => { setActiveTab('history'); fetchHistory(); }}
+            className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer pixel-pill shrink-0 ${
+              activeTab === 'history'
+                ? 'bg-white text-black font-bold shadow-sm'
+                : 'text-[#9aa0a6] hover:text-white'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>History</span>
+            <span className={`px-2 py-0.2 rounded-full text-[10px] ${activeTab === 'history' ? 'bg-black/15 text-black' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
+              {historyItems.length}
             </span>
           </button>
 
@@ -212,6 +266,102 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
         </div>
       )}
 
+      {/* Tab: History (Latest 10 Downloads) */}
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-xs text-[#9aa0a6] bg-[#14171f] border border-white/[0.08] p-3.5 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <FileCheck2 className="w-4 h-4 text-[#b4e3be]" />
+              <span>Showing the latest 10 completed downloads across Sonarr, Radarr, and Lidarr</span>
+            </div>
+            <span className="font-mono text-[11px] text-[#e3e6ed]">{historyItems.length} records</span>
+          </div>
+
+          {loadingHistory ? (
+            <div className="py-20 text-center border border-dashed border-white/10 rounded-3xl bg-[#14171f]/30">
+              <RefreshCw className="w-8 h-8 text-[#9aa0a6] mx-auto mb-2 animate-spin" />
+              <p className="text-sm font-medium text-[#9aa0a6]">Fetching download history...</p>
+            </div>
+          ) : historyItems.length === 0 ? (
+            <div className="py-20 text-center border border-dashed border-white/10 rounded-3xl bg-[#14171f]/30">
+              <History className="w-8 h-8 text-[#5f6368] mx-auto mb-2" />
+              <p className="text-sm font-medium text-[#9aa0a6]">No recent download history found.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {historyItems.map((item, idx) => {
+                let badgeClass = 'bg-[#a8c7fa]/15 text-[#a8c7fa] border-[#a8c7fa]/30';
+                if (item.service === 'radarr' || item.mediaType === 'movie') {
+                  badgeClass = 'bg-[#e0d0b8]/15 text-[#e0d0b8] border-[#e0d0b8]/30';
+                } else if (item.service === 'lidarr' || item.mediaType === 'music') {
+                  badgeClass = 'bg-[#b4e3be]/15 text-[#b4e3be] border-[#b4e3be]/30';
+                }
+
+                const formattedDate = new Date(item.date).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit'
+                });
+
+                return (
+                  <div
+                    key={item.id || `hist-${idx}`}
+                    className="sonos-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 hover:bg-[#181c25] transition-all"
+                  >
+                    <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#0c0e12] border border-white/[0.08] flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-[#b4e3be]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${badgeClass}`}>
+                            {item.service}
+                          </span>
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#b4e3be]/15 text-[#b4e3be] border border-[#b4e3be]/30">
+                            {item.eventType || 'Imported'}
+                          </span>
+                          {item.quality && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-[#9aa0a6] border border-white/[0.08]">
+                              {item.quality}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-bold text-white truncate tracking-tight">
+                          {item.title}
+                        </h4>
+                        {item.seriesOrArtistTitle && item.seriesOrArtistTitle !== item.title && (
+                          <p className="text-[11px] text-[#9aa0a6] truncate mt-0.5">
+                            {item.seriesOrArtistTitle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 border-white/[0.06] pt-2 sm:pt-0 shrink-0 text-xs">
+                      <span className="text-[11px] font-mono text-[#9aa0a6]">
+                        {formattedDate}
+                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        {item.sizeBytes ? (
+                          <span className="text-[10px] font-mono text-[#e3e6ed]">
+                            {formatBytes(item.sizeBytes)}
+                          </span>
+                        ) : null}
+                        <span className="text-[10px] text-[#71767b] font-medium">
+                          {item.downloadClient || 'Completed'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tab 2: Monitored Waitlist / Pending */}
       {activeTab === 'waitlist' && (
         <div className="space-y-4">
@@ -229,14 +379,24 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
               {waitlist.map((item) => (
                 <div
                   key={`${item.service}-${item.id}`}
-                  className="sonos-card p-4 flex gap-3.5 hover:bg-[#181c25] transition-all"
+                  className="sonos-card p-4 flex gap-3.5 hover:bg-[#181c25] transition-all cursor-pointer group"
+                  onClick={() => onSelectItem && onSelectItem(item)}
+                  onMouseEnter={() => {
+                    if (item.posterUrl) prefetchImage(item.posterUrl);
+                  }}
                 >
                   <div className="w-16 h-24 rounded-xl bg-[#0c0e12] overflow-hidden shrink-0 border border-white/[0.08]">
-                    {item.posterUrl ? (
-                      <img src={item.posterUrl} alt={item.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#5f6368] text-[10px]">No image</div>
-                    )}
+                    <MediaPoster
+                      src={item.posterUrl}
+                      alt={item.title}
+                      title={item.title}
+                      artistOrAuthor={item.artist || item.author}
+                      year={item.year}
+                      mediaType={item.mediaType}
+                      service={item.service}
+                      aspectRatio="custom"
+                      className="w-full h-full"
+                    />
                   </div>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between">

@@ -85,6 +85,22 @@ export interface QueueItem {
   outputPath?: string;
 }
 
+export interface DownloadHistoryItem {
+  id: string | number;
+  service: ServiceId;
+  mediaType: MediaType;
+  title: string;
+  seriesOrArtistTitle?: string;
+  eventType: string;
+  date: string;
+  quality?: string;
+  sizeBytes?: number;
+  downloadClient?: string;
+  protocol?: 'torrent' | 'usenet';
+  status: 'completed' | 'imported' | 'grabbed';
+  posterUrl?: string;
+}
+
 export interface CalendarEvent {
   id: string | number;
   service: ServiceId;

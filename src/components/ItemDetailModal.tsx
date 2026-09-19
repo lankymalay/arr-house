@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import type { MediaItem, TvShowDetails } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
+import { MediaPoster } from './MediaPoster.js';
 
 interface ItemDetailModalProps {
   item: MediaItem | null;
@@ -97,12 +98,20 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
       <div className="bg-[#141a29] border border-[#26334a] rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Banner / Poster Header */}
         <div className="relative h-48 sm:h-56 bg-[#0a0d14] overflow-hidden shrink-0">
-          <img
-            src={item.posterUrl}
-            alt={item.title}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover blur-md opacity-25 scale-110"
-          />
+          {item.posterUrl ? (
+            <img
+              src={item.posterUrl}
+              alt=""
+              aria-hidden="true"
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover blur-md opacity-25 scale-110"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-cyan-950/30 via-slate-900 to-indigo-950/30" />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#141a29] via-[#141a29]/60 to-transparent" />
 
           {/* Close Button */}
@@ -117,11 +126,17 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
           {/* Item Meta Over Banner */}
           <div className="absolute bottom-4 left-6 right-6 flex items-end gap-4 z-10">
             <div className="w-20 h-30 sm:w-24 sm:h-36 rounded-2xl bg-[#0a0d14] overflow-hidden shrink-0 border-2 border-white/20 shadow-2xl">
-              <img
+              <MediaPoster
                 src={item.posterUrl}
                 alt={item.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
+                title={item.title}
+                artistOrAuthor={item.artist || item.author}
+                year={item.year}
+                mediaType={item.mediaType}
+                service={item.service}
+                aspectRatio="custom"
+                priority={true}
+                className="w-full h-full"
               />
             </div>
 

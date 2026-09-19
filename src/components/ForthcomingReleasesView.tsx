@@ -23,6 +23,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import type { ExternalReleaseItem } from '../types.js';
+import { MediaPoster } from './MediaPoster.js';
+import { prefetchImage, prefetchImages } from '../utils/prefetch.js';
 
 interface ForthcomingReleasesPayload {
   generatedAt: string;
@@ -48,9 +50,12 @@ interface ForthcomingReleasesViewProps {
   onSearchItem?: (query: string, mediaType?: 'tv' | 'movie' | 'music') => void;
 }
 
+// Module-level in-memory cache for instant tab switching & preloaded state
+let preloadedForthcomingCache: ForthcomingReleasesPayload | null = null;
+
 export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = ({ onSearchItem }) => {
-  const [data, setData] = useState<ForthcomingReleasesPayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<ForthcomingReleasesPayload | null>(preloadedForthcomingCache);
+  const [loading, setLoading] = useState(!preloadedForthcomingCache);
   const [refreshing, setRefreshing] = useState(false);
 
   // Filters
@@ -65,7 +70,7 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
 
   const fetchForthcoming = async (force = false) => {
     if (force) setRefreshing(true);
-    else setLoading(true);
+    else if (!preloadedForthcomingCache) setLoading(true);
 
     try {
       const storedToken = localStorage.getItem('arr_token');
@@ -75,7 +80,17 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
       });
       if (res.ok) {
         const json = await res.json();
+        preloadedForthcomingCache = json;
         setData(json);
+
+        // Preload top upcoming posters into browser cache
+        if (json.spotlight || json.all) {
+          const topPosters = [
+            ...(json.spotlight || []).map((i: any) => i.posterUrl),
+            ...(json.all || []).slice(0, 16).map((i: any) => i.posterUrl)
+          ].filter(Boolean);
+          prefetchImages(topPosters, 4);
+        }
       }
     } catch (err) {
       console.error('Error fetching forthcoming releases:', err);
@@ -289,77 +304,8 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
         </button>
       </div>
 
-      {/* Metric Cards / Quick Category Counters */}
-      {data && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <button
-            onClick={() => { setActiveType('all'); setSelectedMonthKey('all'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeType === 'all'
-                ? 'bg-indigo-500/20 border-indigo-500/50 shadow-md shadow-indigo-950/40'
-                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
-              <span className="font-semibold">All Forthcoming</span>
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.total}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Arriving next 90 days</div>
-          </button>
-
-          <button
-            onClick={() => { setActiveType('movie'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeType === 'movie'
-                ? 'bg-amber-500/20 border-amber-500/50 shadow-md shadow-amber-950/40'
-                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
-              <span className="font-semibold">Movies</span>
-              <Film className="w-3.5 h-3.5 text-amber-400" />
-            </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.movie}</div>
-            <div className="text-[11px] text-amber-300 mt-0.5">Theatrical & streaming</div>
-          </button>
-
-          <button
-            onClick={() => { setActiveType('tv'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeType === 'tv'
-                ? 'bg-sky-500/20 border-sky-500/50 shadow-md shadow-sky-950/40'
-                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
-              <span className="font-semibold">TV Shows</span>
-              <Tv className="w-3.5 h-3.5 text-sky-400" />
-            </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.tv}</div>
-            <div className="text-[11px] text-sky-300 mt-0.5">New series &amp; Ep 1 premieres</div>
-          </button>
-
-          <button
-            onClick={() => { setActiveType('music'); }}
-            className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-              activeType === 'music'
-                ? 'bg-emerald-500/20 border-emerald-500/50 shadow-md shadow-emerald-950/40'
-                : 'bg-[#151b29] border-[#26334a] hover:border-[#3a4c6e]'
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs text-slate-300 mb-1">
-              <span className="font-semibold">Music Albums</span>
-              <Music className="w-3.5 h-3.5 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-bold text-white tracking-tight">{categoryCounts.music}</div>
-            <div className="text-[11px] text-emerald-300 mt-0.5">Studio records</div>
-          </button>
-        </div>
-      )}
-
       {/* Featured Marquee Shelf: Most Anticipated Spotlight */}
-      {data && data.spotlight && data.spotlight.length > 0 && activeType === 'all' && !searchQuery && (
+      {data && data.spotlight && data.spotlight.length > 0 && !searchQuery && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -378,20 +324,24 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
                 <div
                   key={`spotlight-${item.id}`}
                   onClick={() => setSelectedItem(item)}
+                  onMouseEnter={() => {
+                    if (item.posterUrl) prefetchImage(item.posterUrl);
+                  }}
                   className="group relative bg-[#0d1016] border border-amber-500/20 hover:border-amber-500/40 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/10 cursor-pointer flex flex-col"
                 >
                   {/* Media Poster & Badge */}
                   <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
-                    <img
-                      src={item.posterUrl || getMediaFallbackImage(item.mediaType)}
+                    <MediaPoster
+                      src={item.posterUrl}
                       alt={item.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = getMediaFallbackImage(item.mediaType);
-                      }}
+                      title={item.title}
+                      artistOrAuthor={item.seriesOrArtistTitle}
+                      year={item.date ? new Date(item.date).getFullYear() : undefined}
+                      mediaType={item.mediaType}
+                      aspectRatio="video"
+                      className="w-full h-full"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d1016] via-[#0d1016]/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d1016] via-[#0d1016]/40 to-transparent pointer-events-none" />
                     
                     {/* Top Badges */}
                     <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
@@ -647,20 +597,24 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
                 <div
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
+                  onMouseEnter={() => {
+                    if (item.posterUrl) prefetchImage(item.posterUrl);
+                  }}
                   className="group bg-[#0d1017] border border-white/[0.07] hover:border-cyan-500/30 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-cyan-950/30 flex flex-col cursor-pointer"
                 >
                   {/* Poster Image */}
                   <div className="relative aspect-[16/10] bg-slate-900 overflow-hidden">
-                    <img
-                      src={item.posterUrl || getMediaFallbackImage(item.mediaType)}
+                    <MediaPoster
+                      src={item.posterUrl}
                       alt={item.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = getMediaFallbackImage(item.mediaType);
-                      }}
+                      title={item.title}
+                      artistOrAuthor={item.seriesOrArtistTitle}
+                      year={item.date ? new Date(item.date).getFullYear() : undefined}
+                      mediaType={item.mediaType}
+                      aspectRatio="video"
+                      className="w-full h-full"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d1017] via-[#0d1017]/30 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d1017] via-[#0d1017]/30 to-transparent pointer-events-none" />
 
                     {/* Media Type Tag */}
                     <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
@@ -799,16 +753,18 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
 
             {/* Poster Header */}
             <div className="relative aspect-video bg-slate-900 overflow-hidden">
-              <img
-                src={selectedItem.posterUrl || getMediaFallbackImage(selectedItem.mediaType)}
+              <MediaPoster
+                src={selectedItem.posterUrl}
                 alt={selectedItem.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover object-center"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = getMediaFallbackImage(selectedItem.mediaType);
-                }}
+                title={selectedItem.title}
+                artistOrAuthor={selectedItem.seriesOrArtistTitle}
+                year={selectedItem.date ? new Date(selectedItem.date).getFullYear() : undefined}
+                mediaType={selectedItem.mediaType}
+                aspectRatio="video"
+                priority={true}
+                className="w-full h-full"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0f121a] via-[#0f121a]/50 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0f121a] via-[#0f121a]/50 to-transparent pointer-events-none" />
 
               <div className="absolute bottom-4 left-6 right-6">
                 <div className="flex items-center gap-2 mb-1.5">

@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import type { SearchResultItem, ServiceId } from '../types.js';
 import { AddContentModal } from './AddContentModal.js';
+import { MediaPoster } from './MediaPoster.js';
+import { prefetchImage } from '../utils/prefetch.js';
 
 interface SearchViewProps {
   onAddedItem: () => void;
@@ -70,14 +72,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
     return () => clearTimeout(timer);
   }, [query, targetService]);
 
-  const quickPicks = [
-    { label: 'Severance (TV)', q: 'Severance', svc: 'sonarr' as ServiceId },
-    { label: 'Fallout (TV)', q: 'Fallout', svc: 'sonarr' as ServiceId },
-    { label: 'Gladiator II (Movie)', q: 'Gladiator', svc: 'radarr' as ServiceId },
-    { label: 'Interstellar (Movie)', q: 'Interstellar', svc: 'radarr' as ServiceId },
-    { label: 'Radiohead (Music)', q: 'Radiohead', svc: 'lidarr' as ServiceId }
-  ];
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Search Bar Container */}
@@ -98,23 +92,6 @@ export const SearchView: React.FC<SearchViewProps> = ({
             {loading && (
               <Loader2 className="w-5 h-5 text-white animate-spin absolute right-5" />
             )}
-          </div>
-
-          {/* Quick Pick Chips - Pixel Style */}
-          <div className="flex items-center justify-center gap-1.5 flex-wrap mt-4 text-xs">
-            <span className="text-[#9aa0a6] text-xs font-semibold mr-1">Trending:</span>
-            {quickPicks.map((pick) => (
-              <button
-                key={pick.label}
-                onClick={() => {
-                  setQuery(pick.q);
-                  setTargetService(pick.svc);
-                }}
-                className="px-3 py-1.5 rounded-full bg-[#1a1e28] hover:bg-[#222734] text-[#e3e6ed] text-[11px] font-medium border border-white/[0.07] transition-colors cursor-pointer pixel-pill"
-              >
-                {pick.label}
-              </button>
-            ))}
           </div>
         </div>
       </div>
@@ -204,23 +181,25 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 className={`sonos-card p-4 flex gap-4 hover:bg-[#181c25] transition-all group ${
                   !result.alreadyInLibrary ? 'cursor-pointer hover:border-white/20' : ''
                 }`}
+                onMouseEnter={() => {
+                  if (result.posterUrl) prefetchImage(result.posterUrl);
+                }}
               >
                 {/* Poster Thumbnail */}
                 <div className="w-24 h-36 rounded-2xl bg-[#0c0e12] overflow-hidden shrink-0 border border-white/[0.08] relative shadow-sm">
-                  {result.posterUrl ? (
-                    <img
-                      src={result.posterUrl}
-                      alt={result.title}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#5f6368] text-xs">
-                      No Poster
-                    </div>
-                  )}
+                  <MediaPoster
+                    src={result.posterUrl}
+                    alt={result.title}
+                    title={result.title}
+                    artistOrAuthor={result.authorOrArtist}
+                    year={result.year}
+                    mediaType={result.mediaType}
+                    service={result.service}
+                    aspectRatio="custom"
+                    className="w-full h-full"
+                  />
                   {isTvShow && !result.alreadyInLibrary && (
-                    <div className="absolute inset-x-0 bottom-0 bg-black/80 backdrop-blur-xs py-1 px-1.5 text-[9px] font-bold text-center text-[#a8c7fa] border-t border-white/10 opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-x-0 bottom-0 bg-black/80 backdrop-blur-xs py-1 px-1.5 text-[9px] font-bold text-center text-[#a8c7fa] border-t border-white/10 opacity-90 group-hover:opacity-100 transition-opacity z-10">
                       Select Episodes
                     </div>
                   )}

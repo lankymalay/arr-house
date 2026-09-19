@@ -179,7 +179,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
               viewMode === 'agenda' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
             }`}
           >
-            Schedule / Agenda
+            Schedule
           </button>
         </div>
 
