@@ -67,6 +67,7 @@ const MainLayout: React.FC = () => {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [indexers, setIndexers] = useState<ProwlarrIndexer[]>([]);
   const [calendarToken, setCalendarToken] = useState<string>('arr-hub-master-cal-token');
+  const [calendarViewMode, setCalendarViewMode] = useState<'month' | 'agenda'>('month');
   const [refreshing, setRefreshing] = useState(false);
 
   // Modals
@@ -301,6 +302,11 @@ const MainLayout: React.FC = () => {
               items={mediaItems}
               onSelectItem={(item) => openMediaItemModal(item)}
               onNavigate={(tab) => navigateToTab(tab)}
+              calendarToken={calendarToken}
+              onOpenCalendarView={(mode) => {
+                setCalendarViewMode(mode);
+                navigateToTab('calendar');
+              }}
             />
           )}
 
@@ -330,11 +336,14 @@ const MainLayout: React.FC = () => {
             <CalendarView
               events={calendarEvents}
               calendarToken={calendarToken}
+              initialViewMode={calendarViewMode}
             />
           )}
 
           {activeTab === 'external_calendar' && (
             <ForthcomingReleasesView
+              libraryItems={mediaItems}
+              onSelectLibraryItem={openMediaItemModal}
               onSearchItem={(query, mediaType) => {
                 const service: 'all' | ServiceId = mediaType === 'tv' 
                   ? 'sonarr' 

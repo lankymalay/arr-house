@@ -8,24 +8,52 @@ import {
   AlertCircle, 
   Clock, 
   Settings, 
-  PlusCircle
+  PlusCircle,
+  Calendar as CalendarIcon,
+  Download,
+  Copy,
+  ExternalLink,
+  X
 } from 'lucide-react';
 import type { MediaItem, ServiceId } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 import type { NavTab } from './Sidebar.js';
 import { MediaPoster } from './MediaPoster.js';
 import { prefetchImage } from '../utils/prefetch.js';
+import { useToast } from '../context/ToastContext.js';
 
 interface LibrariesViewProps {
   items: MediaItem[];
   onSelectItem: (item: MediaItem) => void;
   onNavigate?: (tab: NavTab) => void;
+  calendarToken?: string;
+  onOpenCalendarView?: (mode: 'month' | 'agenda') => void;
 }
 
-export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectItem, onNavigate }) => {
+export const LibrariesView: React.FC<LibrariesViewProps> = ({ 
+  items, 
+  onSelectItem, 
+  onNavigate,
+  calendarToken = '',
+  onOpenCalendarView
+}) => {
+  const { success } = useToast();
   const [selectedService, setSelectedService] = useState<'all' | ServiceId>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'downloaded' | 'missing' | 'unreleased'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'title' | 'year' | 'size'>('title');
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  const protocol = typeof window !== 'undefined' ? window.location.protocol : 'http:';
+  const effectiveToken = calendarToken || 'arr_house_token';
+  const feedUrl = `${protocol}//${host}/api/calendar/ical?token=${effectiveToken}`;
+  const webcalUrl = `webcal://${host}/api/calendar/ical?token=${effectiveToken}`;
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    success('Copied URL', `${label} link copied to clipboard`);
+  };
 
   const formatBytes = (bytes?: number) => {
     if (!bytes || bytes === 0) return '0 B';
@@ -67,128 +95,174 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
 
   return (
     <div className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
-      {/* Media Type Tabs - Pixel M3 Segmented Capsule Row */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="inline-flex p-1 sm:p-1.5 rounded-full bg-[#14171f] border border-white/[0.08] gap-1 shrink-0">
-          <button
-            id="lib-tab-all"
-            onClick={() => setSelectedService('all')}
-            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
-              selectedService === 'all'
-                ? 'bg-white text-[#0c0e12] shadow-sm font-bold'
-                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <span>All Media</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'all' ? 'bg-black/15 text-black' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
-              {serviceCounts.all}
-            </span>
-          </button>
-
-          <button
-            id="lib-tab-sonarr"
-            onClick={() => setSelectedService('sonarr')}
-            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
-              selectedService === 'sonarr'
-                ? 'bg-[#a8c7fa] text-[#041e49] shadow-sm font-bold'
-                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Tv className="w-3.5 h-3.5" />
-            <span>TV Shows</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'sonarr' ? 'bg-[#041e49]/20 text-[#041e49]' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
-              {serviceCounts.sonarr}
-            </span>
-          </button>
-
-          <button
-            id="lib-tab-radarr"
-            onClick={() => setSelectedService('radarr')}
-            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
-              selectedService === 'radarr'
-                ? 'bg-[#e0d0b8] text-[#3e2723] shadow-sm font-bold'
-                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Film className="w-3.5 h-3.5" />
-            <span>Movies</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'radarr' ? 'bg-[#3e2723]/20 text-[#3e2723]' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
-              {serviceCounts.radarr}
-            </span>
-          </button>
-
-          <button
-            id="lib-tab-lidarr"
-            onClick={() => setSelectedService('lidarr')}
-            className={`px-3.5 sm:px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
-              selectedService === 'lidarr'
-                ? 'bg-[#b4e3be] text-[#072711] shadow-sm font-bold'
-                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Music className="w-3.5 h-3.5" />
-            <span>Music</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'lidarr' ? 'bg-[#072711]/20 text-[#072711]' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
-              {serviceCounts.lidarr}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar - Pixel Capsule Style */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 bg-[#14171f] border border-white/[0.07] p-2.5 sm:p-3 rounded-2xl">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="w-4 h-4 text-[#9aa0a6] absolute left-4 top-1/2 -translate-y-1/2" />
-          <input
-            id="lib-search-input"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search titles, artists, authors, genres..."
-            className="w-full pl-11 pr-4 py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 transition-all font-medium"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Status selector capsule */}
-          <div className="flex items-center gap-1 bg-[#1a1e28] p-1 rounded-full border border-white/[0.08]">
+      {/* Main Content Control Bar: Media Types, Calendar View Actions, Search & Filters */}
+      <div className="bg-[#14171f] border border-white/[0.08] p-3 sm:p-4 rounded-2xl space-y-3.5 shadow-sm">
+        {/* Top Control Tier: Media Categories + Calendar Tools (Sync iCal Feed, Month Grid, Schedule) */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Media Type Tabs: All Media, TV Shows, Movies, Music */}
+          <div className="flex items-center bg-[#1a1e28] p-1 rounded-full border border-white/[0.08] overflow-x-auto scrollbar-none gap-1 shrink-0">
             <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all pixel-pill ${
-                statusFilter === 'all' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              id="lib-tab-all"
+              onClick={() => setSelectedService('all')}
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+                selectedService === 'all'
+                  ? 'bg-white text-[#0c0e12] shadow-sm font-bold'
+                  : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
               }`}
             >
-              All Status
+              <span>All Media</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'all' ? 'bg-black/15 text-black' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
+                {serviceCounts.all}
+              </span>
             </button>
+
             <button
-              onClick={() => setStatusFilter('downloaded')}
-              className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all pixel-pill ${
-                statusFilter === 'downloaded' ? 'bg-[#b4e3be] text-[#072711] font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              id="lib-tab-sonarr"
+              onClick={() => setSelectedService('sonarr')}
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+                selectedService === 'sonarr'
+                  ? 'bg-[#a8c7fa] text-[#041e49] shadow-sm font-bold'
+                  : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
               }`}
             >
-              Downloaded
+              <Tv className="w-3.5 h-3.5" />
+              <span>TV Shows</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'sonarr' ? 'bg-[#041e49]/20 text-[#041e49]' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
+                {serviceCounts.sonarr}
+              </span>
             </button>
+
             <button
-              onClick={() => setStatusFilter('missing')}
-              className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all pixel-pill ${
-                statusFilter === 'missing' ? 'bg-[#f28b82] text-[#49110d] font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              id="lib-tab-radarr"
+              onClick={() => setSelectedService('radarr')}
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+                selectedService === 'radarr'
+                  ? 'bg-[#e0d0b8] text-[#3e2723] shadow-sm font-bold'
+                  : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
               }`}
             >
-              Missing
+              <Film className="w-3.5 h-3.5" />
+              <span>Movies</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'radarr' ? 'bg-[#3e2723]/20 text-[#3e2723]' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
+                {serviceCounts.radarr}
+              </span>
+            </button>
+
+            <button
+              id="lib-tab-lidarr"
+              onClick={() => setSelectedService('lidarr')}
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 sm:gap-2 transition-all shrink-0 cursor-pointer pixel-pill ${
+                selectedService === 'lidarr'
+                  ? 'bg-[#b4e3be] text-[#072711] shadow-sm font-bold'
+                  : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
+              }`}
+            >
+              <Music className="w-3.5 h-3.5" />
+              <span>Music</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${selectedService === 'lidarr' ? 'bg-[#072711]/20 text-[#072711]' : 'bg-white/[0.08] text-[#9aa0a6]'}`}>
+                {serviceCounts.lidarr}
+              </span>
             </button>
           </div>
 
-          {/* Sort selector */}
-          <select
-            id="lib-sort-select"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-[#e3e6ed] px-4 py-2 focus:outline-none focus:border-white/30 cursor-pointer font-medium"
-          >
-            <option value="title">Sort by Title</option>
-            <option value="year">Sort by Release Year</option>
-            <option value="size">Sort by File Size</option>
-          </select>
+          {/* Quick Calendar Tools: Month Grid, Schedule & Sync iCal Feed */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* View switcher capsule: Month Grid & Schedule */}
+            <div className="flex items-center bg-[#1a1e28] p-1 rounded-full border border-white/[0.08]">
+              <button
+                id="lib-view-month-grid"
+                onClick={() => {
+                  if (onOpenCalendarView) onOpenCalendarView('month');
+                  else if (onNavigate) onNavigate('calendar');
+                }}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-all pixel-pill flex items-center gap-1.5 cursor-pointer"
+                title="View in Library Calendar Month Grid"
+              >
+                <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Month Grid</span>
+              </button>
+              <button
+                id="lib-view-schedule"
+                onClick={() => {
+                  if (onOpenCalendarView) onOpenCalendarView('agenda');
+                  else if (onNavigate) onNavigate('calendar');
+                }}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-all pixel-pill flex items-center gap-1.5 cursor-pointer"
+                title="View in Library Calendar Schedule / Agenda"
+              >
+                <Clock className="w-3.5 h-3.5 text-sky-400" />
+                <span>Schedule</span>
+              </button>
+            </div>
+
+            {/* Sync iCal Feed Button */}
+            <button
+              id="lib-sync-ical-btn"
+              onClick={() => setShowSubscribeModal(true)}
+              className="px-3.5 py-1.5 rounded-full bg-[#1a1e28] hover:bg-[#222734] text-white border border-white/[0.08] hover:border-white/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer pixel-pill shrink-0"
+              title="Subscribe to Library iCal Calendar Feed"
+            >
+              <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
+              <span>Sync iCal Feed</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Tier: Search Bar, Status Filter Capsule & Sort Dropdown */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2.5 border-t border-white/[0.06]">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="w-4 h-4 text-[#9aa0a6] absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              id="lib-search-input"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search titles, artists, authors, genres..."
+              className="w-full pl-11 pr-4 py-2 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 transition-all font-medium"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Status selector capsule */}
+            <div className="flex items-center gap-1 bg-[#1a1e28] p-1 rounded-full border border-white/[0.08]">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all pixel-pill ${
+                  statusFilter === 'all' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+                }`}
+              >
+                All Status
+              </button>
+              <button
+                onClick={() => setStatusFilter('downloaded')}
+                className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all pixel-pill ${
+                  statusFilter === 'downloaded' ? 'bg-[#b4e3be] text-[#072711] font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+                }`}
+              >
+                Downloaded
+              </button>
+              <button
+                onClick={() => setStatusFilter('missing')}
+                className={`px-3 py-1.5 text-xs rounded-full font-medium transition-all pixel-pill ${
+                  statusFilter === 'missing' ? 'bg-[#f28b82] text-[#49110d] font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+                }`}
+              >
+                Missing
+              </button>
+            </div>
+
+            {/* Sort selector */}
+            <select
+              id="lib-sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs text-[#e3e6ed] px-3.5 py-2 focus:outline-none focus:border-white/30 cursor-pointer font-medium"
+            >
+              <option value="title">Sort by Title</option>
+              <option value="year">Sort by Release Year</option>
+              <option value="size">Sort by File Size</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -274,10 +348,10 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e12]/95 via-transparent to-black/30 pointer-events-none z-10" />
 
-                  {/* Service Badge Top Left - Subtle Minimalist Capsule */}
+                  {/* Content Badge Top Left - Subtle Minimalist Capsule */}
                   <div className="absolute top-2.5 left-2.5 z-20">
                     <span className={`text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm backdrop-blur-md ${serviceBadgeClass}`}>
-                      {item.service}
+                      {getContentTypeLabel(item.service, item.mediaType)}
                     </span>
                   </div>
 
@@ -300,10 +374,12 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
                     )}
                   </div>
 
-                  {/* Year Bottom overlay */}
-                  <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-[11px] text-white/90 font-medium z-20 font-mono">
-                    <span>{item.year || 'Unknown'}</span>
-                  </div>
+                  {/* Year Bottom overlay (Movies & TV shows only) */}
+                  {item.mediaType !== 'music' && item.service !== 'lidarr' && item.year ? (
+                    <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-[11px] text-white/90 font-medium z-20 font-mono">
+                      <span>{item.year}</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Details Footer */}
@@ -330,6 +406,81 @@ export const LibrariesView: React.FC<LibrariesViewProps> = ({ items, onSelectIte
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Subscribe to iCal Feed Modal */}
+      {showSubscribeModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#14171f] border border-white/[0.08] rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowSubscribeModal(false)}
+              className="absolute top-5 right-5 text-[#9aa0a6] hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <Download className="w-5 h-5 text-[#b4e3be]" />
+                Subscribe to Library Calendar
+              </h3>
+              <p className="text-xs text-[#9aa0a6] mt-1">
+                Sync live episode air dates, movie premieres, and album drops to your phone, Google Calendar, or desktop client.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6] block mb-1.5">
+                  WebCal Quick Subscribe (Apple / Outlook)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={webcalUrl}
+                    className="w-full bg-[#1a1e28] border border-white/[0.08] rounded-full px-4 py-2.5 text-xs text-[#e3e6ed] font-mono focus:outline-none"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(webcalUrl, 'WebCal')}
+                    className="px-4 py-2.5 bg-white text-black hover:bg-neutral-200 rounded-full text-xs font-bold shrink-0 transition-colors cursor-pointer pixel-pill"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-[#9aa0a6] block mb-1.5">
+                  Standard iCal Feed URL
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={feedUrl}
+                    className="w-full bg-[#1a1e28] border border-white/[0.08] rounded-full px-4 py-2.5 text-xs text-[#e3e6ed] font-mono focus:outline-none"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(feedUrl, 'iCal')}
+                    className="px-4 py-2.5 bg-[#1a1e28] hover:bg-[#222734] border border-white/10 rounded-full text-xs text-white font-bold shrink-0 transition-colors cursor-pointer pixel-pill"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowSubscribeModal(false)}
+                className="px-5 py-2.5 bg-white text-black hover:bg-neutral-200 text-xs font-bold rounded-full cursor-pointer pixel-pill"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

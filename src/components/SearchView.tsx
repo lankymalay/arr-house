@@ -4,14 +4,18 @@ import {
   Tv, 
   Film, 
   Music, 
+  Disc3,
   Plus, 
   Check, 
   Loader2,
   Layers,
-  SlidersHorizontal
+  SlidersHorizontal,
+  X
 } from 'lucide-react';
 import type { SearchResultItem, ServiceId } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 import { AddContentModal } from './AddContentModal.js';
+import { ArtistDetailModal } from './ArtistDetailModal.js';
 import { MediaPoster } from './MediaPoster.js';
 import { prefetchImage } from '../utils/prefetch.js';
 
@@ -33,6 +37,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedItemForAdd, setSelectedItemForAdd] = useState<SearchResultItem | null>(null);
+  const [selectedArtistForAlbums, setSelectedArtistForAlbums] = useState<SearchResultItem | null>(null);
 
   useEffect(() => {
     if (initialQuery) {
@@ -74,49 +79,30 @@ export const SearchView: React.FC<SearchViewProps> = ({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Search Bar Container */}
-      <div className="sonos-card p-6 sm:p-8 relative overflow-hidden">
-        <div className="max-w-2xl mx-auto text-center">
-          {/* Pixel Search Capsule Bar */}
-          <div className="relative flex items-center">
-            <Search className="w-5 h-5 text-[#9aa0a6] absolute left-5 pointer-events-none" />
-            <input
-              id="universal-search-input"
-              type="text"
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by series title, movie, or musical artist..."
-              className="w-full pl-13 pr-12 py-3.5 bg-[#1a1e28] border border-white/[0.09] rounded-full text-sm text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/10 shadow-lg font-medium transition-all"
-            />
-            {loading && (
-              <Loader2 className="w-5 h-5 text-white animate-spin absolute right-5" />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Service Filter Tabs - Pixel Segmented Capsule */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <div className="inline-flex p-1 rounded-full bg-[#14171f] border border-white/[0.08] gap-1">
+      {/* Search & Filters Toolbar in Main Content */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#14171f] border border-white/[0.08] p-3 sm:p-3.5 rounded-2xl shadow-sm">
+        {/* Service Filter Tabs */}
+        <div className="flex items-center bg-[#1a1e28] p-1 rounded-full border border-white/[0.08] gap-1 overflow-x-auto scrollbar-none shrink-0">
           <button
+            id="search-filter-all"
             onClick={() => setTargetService('all')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer pixel-pill ${
               targetService === 'all'
                 ? 'bg-white text-black font-bold shadow-sm'
-                : 'text-[#9aa0a6] hover:text-white'
+                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>All Services</span>
+            <span>All Media</span>
           </button>
 
           <button
+            id="search-filter-sonarr"
             onClick={() => setTargetService('sonarr')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer pixel-pill ${
               targetService === 'sonarr'
                 ? 'bg-[#a8c7fa] text-[#041e49] font-bold shadow-sm'
-                : 'text-[#9aa0a6] hover:text-white'
+                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
             }`}
           >
             <Tv className="w-3.5 h-3.5" />
@@ -124,11 +110,12 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </button>
 
           <button
+            id="search-filter-radarr"
             onClick={() => setTargetService('radarr')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer pixel-pill ${
               targetService === 'radarr'
                 ? 'bg-[#e0d0b8] text-[#3e2723] font-bold shadow-sm'
-                : 'text-[#9aa0a6] hover:text-white'
+                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
             }`}
           >
             <Film className="w-3.5 h-3.5" />
@@ -136,16 +123,42 @@ export const SearchView: React.FC<SearchViewProps> = ({
           </button>
 
           <button
+            id="search-filter-lidarr"
             onClick={() => setTargetService('lidarr')}
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer pixel-pill ${
               targetService === 'lidarr'
                 ? 'bg-[#b4e3be] text-[#072711] font-bold shadow-sm'
-                : 'text-[#9aa0a6] hover:text-white'
+                : 'text-[#9aa0a6] hover:text-white hover:bg-white/[0.05]'
             }`}
           >
             <Music className="w-3.5 h-3.5" />
             <span>Music</span>
           </button>
+        </div>
+
+        {/* Search Input (to the right of the filters) */}
+        <div className="relative flex-1 min-w-[260px]">
+          <Search className="w-4 h-4 text-[#9aa0a6] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            id="universal-search-input"
+            type="text"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by series title, movie, or musical artist..."
+            className="w-full pl-11 pr-11 py-2 sm:py-2.5 bg-[#1a1e28] border border-white/[0.08] rounded-full text-xs sm:text-sm text-white placeholder-[#9aa0a6] focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/10 font-medium transition-all"
+          />
+          {loading ? (
+            <Loader2 className="w-4 h-4 text-white animate-spin absolute right-4 top-1/2 -translate-y-1/2" />
+          ) : query ? (
+            <button
+              onClick={() => setQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9aa0a6] hover:text-white transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -166,21 +179,22 @@ export const SearchView: React.FC<SearchViewProps> = ({
               'bg-white/10 text-white';
 
             const isTvShow = result.service === 'sonarr' || result.mediaType === 'tv';
+            const isMusic = result.service === 'lidarr' || result.mediaType === 'music';
 
             return (
               <div
                 key={`${result.service}-${result.foreignId}`}
                 id={`search-card-${result.foreignId}`}
                 onClick={() => {
-                  if (!result.alreadyInLibrary) {
+                  if (isMusic) {
+                    setSelectedArtistForAlbums(result);
+                  } else if (!result.alreadyInLibrary) {
                     setSelectedItemForAdd(result);
                   } else if (result.existingId && onViewLibraryItem) {
                     onViewLibraryItem(result.existingId);
                   }
                 }}
-                className={`sonos-card p-4 flex gap-4 hover:bg-[#181c25] transition-all group ${
-                  !result.alreadyInLibrary ? 'cursor-pointer hover:border-white/20' : ''
-                }`}
+                className="sonos-card p-4 flex gap-4 hover:bg-[#181c25] transition-all group cursor-pointer hover:border-white/20"
                 onMouseEnter={() => {
                   if (result.posterUrl) prefetchImage(result.posterUrl);
                 }}
@@ -203,6 +217,12 @@ export const SearchView: React.FC<SearchViewProps> = ({
                       Select Episodes
                     </div>
                   )}
+                  {isMusic && (
+                    <div className="absolute inset-x-0 bottom-0 bg-black/85 backdrop-blur-xs py-1 px-1.5 text-[9px] font-bold text-center text-[#b4e3be] border-t border-white/10 opacity-90 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center gap-1">
+                      <Disc3 className="w-2.5 h-2.5" />
+                      <span>Studio Albums</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Details & Add Button */}
@@ -210,14 +230,20 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   <div>
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <span className={`text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm ${serviceBadgeClass}`}>
-                        {result.service}
+                        {getContentTypeLabel(result.service, result.mediaType)}
                       </span>
-                      {result.year && (
+                      {result.year && result.mediaType !== 'music' && result.service !== 'lidarr' && (
                         <span className="text-xs text-[#9aa0a6] font-mono">{result.year}</span>
                       )}
                       {isTvShow && (
                         <span className="text-[10px] text-[#a8c7fa] bg-[#a8c7fa]/10 px-2 py-0.5 rounded-full border border-[#a8c7fa]/20 font-medium">
                           Whole show, seasons, or individual episodes
+                        </span>
+                      )}
+                      {isMusic && (
+                        <span className="text-[10px] text-[#b4e3be] bg-[#b4e3be]/10 px-2 py-0.5 rounded-full border border-[#b4e3be]/20 font-medium flex items-center gap-1">
+                          <Disc3 className="w-2.5 h-2.5" />
+                          <span>Studio Albums</span>
                         </span>
                       )}
                     </div>
@@ -253,14 +279,47 @@ export const SearchView: React.FC<SearchViewProps> = ({
                         <span className="text-[#a8c7fa] hover:underline">
                           Click card to choose episodes
                         </span>
+                      ) : isMusic ? (
+                        <span className="text-[#b4e3be] hover:underline">
+                          Click artist to view studio albums
+                        </span>
                       ) : null}
                     </div>
 
                     {result.alreadyInLibrary ? (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#b4e3be]/15 text-[#b4e3be] text-xs font-bold border border-[#b4e3be]/20">
-                        <Check className="w-3.5 h-3.5" />
-                        <span>In Library</span>
-                      </div>
+                      isMusic ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedArtistForAlbums(result);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#b4e3be]/15 text-[#b4e3be] hover:bg-[#b4e3be]/25 text-xs font-bold border border-[#b4e3be]/30 transition-all cursor-pointer"
+                          title="View studio albums"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>In Library • Albums</span>
+                        </button>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#b4e3be]/15 text-[#b4e3be] text-xs font-bold border border-[#b4e3be]/20">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>In Library</span>
+                        </div>
+                      )
+                    ) : isMusic ? (
+                      <button
+                        id={`btn-albums-${result.foreignId}`}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedArtistForAlbums(result);
+                        }}
+                        className="px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer pixel-pill bg-[#b4e3be] text-[#072711] hover:bg-[#9dd6a9]"
+                        title="View studio albums discography"
+                      >
+                        <Disc3 className="w-3.5 h-3.5" />
+                        <span>Studio Albums</span>
+                      </button>
                     ) : (
                       <button
                         id={`btn-add-${result.foreignId}`}
@@ -294,6 +353,22 @@ export const SearchView: React.FC<SearchViewProps> = ({
             );
           })}
         </div>
+      )}
+
+      {/* Studio Albums Modal when clicking an artist */}
+      {selectedArtistForAlbums && (
+        <ArtistDetailModal
+          item={selectedArtistForAlbums}
+          onClose={() => setSelectedArtistForAlbums(null)}
+          onRefreshItem={() => {
+            onAddedItem();
+            executeSearch(query, targetService);
+          }}
+          onAddArtist={(itemToConfigure) => {
+            setSelectedArtistForAlbums(null);
+            setSelectedItemForAdd(itemToConfigure);
+          }}
+        />
       )}
 
       {/* Add Modal */}

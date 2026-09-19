@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tv, Film, Music, Disc3 } from 'lucide-react';
 import type { ServiceId } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 
 export interface MediaPosterProps {
   src?: string | null;
@@ -126,9 +127,9 @@ export const MediaPoster: React.FC<MediaPosterProps> = ({
       >
         <div className="w-full flex justify-between items-center opacity-60">
           <span className="text-[9px] uppercase tracking-wider font-mono text-slate-400 font-semibold">
-            {service || effectiveMediaType}
+            {getContentTypeLabel(service, effectiveMediaType)}
           </span>
-          {year && (
+          {year && effectiveMediaType !== 'music' && (
             <span className="text-[10px] font-mono text-slate-400">
               {year}
             </span>

@@ -6,14 +6,12 @@ import {
   Search, 
   Star, 
   Loader2,
-  Sparkles,
   Calendar as CalendarIcon,
   Clock,
   ExternalLink,
   ChevronRight,
   ChevronDown,
   Filter,
-  Flame,
   Plus,
   RefreshCw,
   X,
@@ -22,38 +20,24 @@ import {
   TrendingUp,
   CheckCircle2
 } from 'lucide-react';
-import type { ExternalReleaseItem } from '../types.js';
+import type { ExternalReleaseItem, ForthcomingReleasesPayload, MediaItem } from '../types.js';
 import { MediaPoster } from './MediaPoster.js';
 import { prefetchImage, prefetchImages } from '../utils/prefetch.js';
 
-interface ForthcomingReleasesPayload {
-  generatedAt: string;
-  timeframe: {
-    startDate: string;
-    endDate: string;
-    months: { key: string; label: string; year: number; month: number }[];
-  };
-  counts: {
-    total: number;
-    tv: number;
-    movie: number;
-    music: number;
-  };
-  spotlight: ExternalReleaseItem[];
-  topTv: ExternalReleaseItem[];
-  topMovies: ExternalReleaseItem[];
-  topMusic: ExternalReleaseItem[];
-  all: ExternalReleaseItem[];
-}
-
 interface ForthcomingReleasesViewProps {
+  libraryItems?: MediaItem[];
+  onSelectLibraryItem?: (item: MediaItem) => void;
   onSearchItem?: (query: string, mediaType?: 'tv' | 'movie' | 'music') => void;
 }
 
 // Module-level in-memory cache for instant tab switching & preloaded state
 let preloadedForthcomingCache: ForthcomingReleasesPayload | null = null;
 
-export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = ({ onSearchItem }) => {
+export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = ({ 
+  libraryItems,
+  onSelectLibraryItem,
+  onSearchItem 
+}) => {
   const [data, setData] = useState<ForthcomingReleasesPayload | null>(preloadedForthcomingCache);
   const [loading, setLoading] = useState(!preloadedForthcomingCache);
   const [refreshing, setRefreshing] = useState(false);
@@ -107,12 +91,31 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
   // Compute countdown from today
   const getDaysUntil = (dateStr: string) => {
     try {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        const target = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      if (!dateStr || typeof dateStr !== 'string' || dateStr.toLowerCase().includes('invalid')) {
+        return { label: 'TBD', isSoon: false, isToday: false, days: 99 };
+      }
+      const clean = dateStr.split('T')[0];
+      const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      let target: Date | null = null;
+      if (match) {
+        const y = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const d = parseInt(match[3], 10);
+        if (y >= 1970 && y <= 2100) {
+          target = new Date(y, m - 1, d);
+        }
+      } else {
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 1970 && parsed.getFullYear() <= 2100) {
+          target = parsed;
+        }
+      }
+
+      if (target && !isNaN(target.getTime())) {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const diffDays = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const targetPure = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+        const diffDays = Math.ceil((targetPure.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
         if (diffDays <= 0) return { label: 'Releasing today', isSoon: true, isToday: true, days: 0 };
         if (diffDays === 1) return { label: 'Tomorrow', isSoon: true, isToday: false, days: 1 };
@@ -124,20 +127,38 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
     } catch {
       // ignore
     }
-    return { label: dateStr, isSoon: false, isToday: false, days: 99 };
+    return { label: 'TBD', isSoon: false, isToday: false, days: 99 };
   };
 
   const formatReleaseDate = (dateStr: string) => {
     try {
-      const parts = dateStr.split('-');
-      if (parts.length === 3) {
-        const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (!dateStr || typeof dateStr !== 'string' || dateStr.toLowerCase().includes('invalid')) {
+        return 'Date TBD';
+      }
+      const clean = dateStr.split('T')[0];
+      const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        const y = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const d = parseInt(match[3], 10);
+        if (y >= 1970 && y <= 2100) {
+          const dateObj = new Date(y, m - 1, d);
+          if (!isNaN(dateObj.getTime())) {
+            const formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            if (formatted && !formatted.toLowerCase().includes('invalid')) return formatted;
+          }
+        }
+      } else {
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 1970 && parsed.getFullYear() <= 2100) {
+          const formatted = parsed.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          if (formatted && !formatted.toLowerCase().includes('invalid')) return formatted;
+        }
       }
     } catch {
       // fallback
     }
-    return dateStr;
+    return 'Date TBD';
   };
 
   // Group TV shows so each TV show is shown only once and not loads of episodes
@@ -290,138 +311,6 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 animate-fadeIn">
-      {/* Action Controls & Refresh */}
-      <div className="flex items-center justify-end gap-2 border-b border-white/[0.08] pb-4">
-        <button
-          id="refresh-forthcoming-btn"
-          onClick={() => fetchForthcoming(true)}
-          disabled={loading || refreshing}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-900 border border-white/[0.08] hover:border-cyan-500/30 text-slate-300 hover:text-white transition shadow-sm active:scale-95 disabled:opacity-50"
-          title="Refresh Forthcoming Releases"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
-          <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-        </button>
-      </div>
-
-      {/* Featured Marquee Shelf: Most Anticipated Spotlight */}
-      {data && data.spotlight && data.spotlight.length > 0 && !searchQuery && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-amber-400" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">
-                Most Anticipated Spotlight
-              </h2>
-            </div>
-            <span className="text-xs text-slate-400">Hand-picked blockbusters & major premieres</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {data.spotlight.slice(0, 4).map((item) => {
-              const countdown = getDaysUntil(item.date);
-              return (
-                <div
-                  key={`spotlight-${item.id}`}
-                  onClick={() => setSelectedItem(item)}
-                  onMouseEnter={() => {
-                    if (item.posterUrl) prefetchImage(item.posterUrl);
-                  }}
-                  className="group relative bg-[#0d1016] border border-amber-500/20 hover:border-amber-500/40 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/10 cursor-pointer flex flex-col"
-                >
-                  {/* Media Poster & Badge */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
-                    <MediaPoster
-                      src={item.posterUrl}
-                      alt={item.title}
-                      title={item.title}
-                      artistOrAuthor={item.seriesOrArtistTitle}
-                      year={item.date ? new Date(item.date).getFullYear() : undefined}
-                      mediaType={item.mediaType}
-                      aspectRatio="video"
-                      className="w-full h-full"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d1016] via-[#0d1016]/40 to-transparent pointer-events-none" />
-                    
-                    {/* Top Badges */}
-                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border backdrop-blur-md ${
-                        item.mediaType === 'movie' 
-                          ? 'bg-purple-500/30 text-purple-200 border-purple-400/40' 
-                          : item.mediaType === 'tv'
-                            ? 'bg-cyan-500/30 text-cyan-200 border-cyan-400/40'
-                            : 'bg-emerald-500/30 text-emerald-200 border-emerald-400/40'
-                      }`}>
-                        {item.mediaType}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 backdrop-blur-md flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                        {item.rating.toFixed(1)}
-                      </span>
-                    </div>
-
-                    {/* Countdown Pill */}
-                    <div className="absolute bottom-2.5 right-2.5">
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold backdrop-blur-md ${
-                        countdown.isSoon 
-                          ? 'bg-rose-500/80 text-white font-bold animate-pulse'
-                          : 'bg-slate-900/80 text-slate-300 border border-white/[0.1]'
-                      }`}>
-                        {countdown.label}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Body Content */}
-                  <div className="p-3.5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="text-[11px] font-medium text-slate-400 truncate mb-0.5">
-                        {formatReleaseDate(item.date)}
-                        {item.ratingCount ? ` • ${item.ratingCount}` : ''}
-                      </div>
-                      <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1">
-                        {item.title}
-                      </h3>
-                      {item.seriesOrArtistTitle && item.seriesOrArtistTitle !== item.title && (
-                        <p className="text-xs text-slate-400 line-clamp-1 mb-1">
-                          {item.seriesOrArtistTitle}
-                        </p>
-                      )}
-                      <p className="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">
-                        {item.overview}
-                      </p>
-                    </div>
-
-                    {/* Quick Search in Arr Button */}
-                    <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between">
-                      <div className="flex gap-1 overflow-hidden">
-                        {item.genres.slice(0, 2).map((g) => (
-                          <span key={g} className="px-1.5 py-0.5 rounded text-[10px] bg-white/[0.05] text-slate-400">
-                            {g}
-                          </span>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSearchAction(item);
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 transition active:scale-95"
-                        title={`Search in ${getTargetServiceLabel(item.mediaType)}`}
-                      >
-                        <Search className="w-3 h-3" />
-                        <span>{getTargetServiceLabel(item.mediaType)}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Filter & Search Bar */}
       <div className="bg-[#0c0f15] border border-white/[0.08] rounded-2xl p-4 space-y-4 shadow-sm">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
@@ -446,50 +335,63 @@ export const ForthcomingReleasesView: React.FC<ForthcomingReleasesViewProps> = (
             )}
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex items-center bg-[#141822] p-1 rounded-xl border border-white/[0.08] overflow-x-auto text-xs font-medium">
+          {/* Category Tabs & Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center bg-[#141822] p-1 rounded-xl border border-white/[0.08] overflow-x-auto text-xs font-medium">
+              <button
+                onClick={() => setActiveType('all')}
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
+                  activeType === 'all'
+                    ? 'bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                All Types
+              </button>
+              <button
+                onClick={() => setActiveType('movie')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
+                  activeType === 'movie'
+                    ? 'bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>Movies</span>
+              </button>
+              <button
+                onClick={() => setActiveType('tv')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
+                  activeType === 'tv'
+                    ? 'bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>TV Shows</span>
+              </button>
+              <button
+                onClick={() => setActiveType('music')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
+                  activeType === 'music'
+                    ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Music className="w-3.5 h-3.5" />
+                <span>Music</span>
+              </button>
+            </div>
+
             <button
-              onClick={() => setActiveType('all')}
-              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
-                activeType === 'all'
-                  ? 'bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              id="refresh-forthcoming-btn"
+              onClick={() => fetchForthcoming(true)}
+              disabled={loading || refreshing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#141822] hover:bg-white/[0.08] border border-white/[0.08] hover:border-cyan-500/30 text-slate-300 hover:text-white transition shadow-sm active:scale-95 disabled:opacity-50 cursor-pointer shrink-0"
+              title="Refresh Forthcoming Releases"
             >
-              All Types
-            </button>
-            <button
-              onClick={() => setActiveType('movie')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
-                activeType === 'movie'
-                  ? 'bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Film className="w-3.5 h-3.5" />
-              <span>Movies</span>
-            </button>
-            <button
-              onClick={() => setActiveType('tv')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
-                activeType === 'tv'
-                  ? 'bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Tv className="w-3.5 h-3.5" />
-              <span>TV Shows</span>
-            </button>
-            <button
-              onClick={() => setActiveType('music')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg whitespace-nowrap transition ${
-                activeType === 'music'
-                  ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Music className="w-3.5 h-3.5" />
-              <span>Music</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
         </div>

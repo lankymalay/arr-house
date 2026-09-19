@@ -5,6 +5,7 @@ import {
   Tv, 
   Film, 
   Music, 
+  Disc3,
   ChevronDown, 
   ChevronRight, 
   Check, 
@@ -25,8 +26,11 @@ import type {
   TvShowDetails, 
   TvSeasonItem, 
   TvEpisodeItem,
+  ArtistDetails,
+  StudioAlbumItem,
   AddContentPayload 
 } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { MediaPoster } from './MediaPoster.js';
 
@@ -58,6 +62,13 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
   const [selectedSeasons, setSelectedSeasons] = useState<Set<number>>(new Set());
   const [selectedEpisodes, setSelectedEpisodes] = useState<Set<string>>(new Set());
   const [expandedSeasons, setExpandedSeasons] = useState<Set<number>>(new Set());
+
+  // Music Artist Studio Albums state
+  const isMusic = item?.service === 'lidarr' || item?.mediaType === 'music';
+  const [artistDetails, setArtistDetails] = useState<ArtistDetails | null>(null);
+  const [loadingArtistDetails, setLoadingArtistDetails] = useState(false);
+  const [selectedAlbums, setSelectedAlbums] = useState<Set<string | number>>(new Set());
+  const [albumSelectionMode, setAlbumSelectionMode] = useState<'all' | 'latest' | 'custom'>('all');
 
   // Fetch quality profiles and root folders
   useEffect(() => {
@@ -139,6 +150,36 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
 
     fetchTvBreakdown();
   }, [item, isTvShow]);
+
+  // Fetch Music Studio Albums if Lidarr / Music
+  useEffect(() => {
+    if (!item || !isMusic) return;
+
+    const fetchArtistBreakdown = async () => {
+      setLoadingArtistDetails(true);
+      try {
+        const token = localStorage.getItem('arr_token');
+        const artistName = item.authorOrArtist || item.title;
+        const url = `/api/arr/artist/details?artist=${encodeURIComponent(artistName)}&id=${encodeURIComponent(String(item.foreignId || ''))}`;
+        const res = await fetch(url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+
+        if (res.ok) {
+          const details: ArtistDetails = await res.json();
+          setArtistDetails(details);
+          const allIds = new Set(details.studioAlbums.map((a) => a.id));
+          setSelectedAlbums(allIds);
+        }
+      } catch (err) {
+        console.error('Failed to fetch artist studio albums breakdown', err);
+      } finally {
+        setLoadingArtistDetails(false);
+      }
+    };
+
+    fetchArtistBreakdown();
+  }, [item, isMusic]);
 
   if (!item) return null;
 
@@ -274,6 +315,35 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
     setSelectedEpisodes(new Set());
   };
 
+  // Music Album Selection Helpers
+  const selectAllStudioAlbums = () => {
+    if (!artistDetails) return;
+    setAlbumSelectionMode('all');
+    setSelectedAlbums(new Set(artistDetails.studioAlbums.map((a) => a.id)));
+  };
+
+  const selectLatestAlbumOnly = () => {
+    if (!artistDetails || artistDetails.studioAlbums.length === 0) return;
+    setAlbumSelectionMode('latest');
+    setSelectedAlbums(new Set([artistDetails.studioAlbums[0].id]));
+  };
+
+  const deselectAllStudioAlbums = () => {
+    setAlbumSelectionMode('custom');
+    setSelectedAlbums(new Set());
+  };
+
+  const handleToggleAlbum = (albumId: string | number) => {
+    const next = new Set(selectedAlbums);
+    if (next.has(albumId)) {
+      next.delete(albumId);
+    } else {
+      next.add(albumId);
+    }
+    setSelectedAlbums(next);
+    setAlbumSelectionMode('custom');
+  };
+
   // Submission handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,7 +362,11 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
         foreignId: item.foreignId,
         rootFolderPath: selectedRootPath,
         qualityProfileId: selectedProfileId,
-        monitored: isTvShow ? (selectedEpisodes.size > 0 || selectionMode === 'whole_show') : monitorAll,
+        monitored: isTvShow 
+          ? (selectedEpisodes.size > 0 || selectionMode === 'whole_show') 
+          : isMusic 
+          ? (selectedAlbums.size > 0) 
+          : monitorAll,
         searchForMissing,
         monitorScope: isTvShow
           ? selectionMode === 'whole_show'
@@ -308,6 +382,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
               return { season: s, episode: e };
             })
           : undefined,
+        selectedAlbums: isMusic ? Array.from(selectedAlbums) : undefined,
         metadata: {
           year: item.year,
           overview: item.overview,
@@ -329,6 +404,8 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
       if (res.ok) {
         const summaryText = isTvShow && selectionMode !== 'whole_show'
           ? `Added ${item.title} (${selectedEpisodes.size} episodes across ${selectedSeasons.size} seasons monitored)`
+          : isMusic && selectedAlbums.size > 0
+          ? `Added ${item.title} (${selectedAlbums.size} studio albums monitored)`
           : data.message || `Added ${item.title} to ${item.service.toUpperCase()}`;
         success('Added to Library', summaryText);
         onAdded();
@@ -358,7 +435,7 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className={`bg-[#14171f] border border-white/[0.09] rounded-3xl w-full overflow-hidden shadow-2xl flex flex-col my-auto ${
-        isTvShow ? 'max-w-3xl max-h-[92vh]' : 'max-w-lg max-h-[90vh]'
+        isTvShow || isMusic ? 'max-w-3xl max-h-[92vh]' : 'max-w-lg max-h-[90vh]'
       }`}>
         
         {/* Header with media summary */}
@@ -382,9 +459,9 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1 ${serviceBadgeClass}`}>
                 {isTvShow ? <Tv className="w-2.5 h-2.5" /> : item.service === 'radarr' ? <Film className="w-2.5 h-2.5" /> : <Music className="w-2.5 h-2.5" />}
-                <span>{item.service}</span>
+                <span>{getContentTypeLabel(item.service, item.mediaType)}</span>
               </span>
-              {item.year && (
+              {item.year && item.mediaType !== 'music' && item.service !== 'lidarr' && (
                 <span className="text-xs text-[#9aa0a6] font-mono font-medium">{item.year}</span>
               )}
               {isTvShow && tvDetails && (
@@ -750,6 +827,148 @@ export const AddContentModal: React.FC<AddContentModalProps> = ({ item, onClose,
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MUSIC ARTIST SPECIALIZED SECTION: Studio Albums Breakdown & Monitoring */}
+          {isMusic && (
+            <div className="space-y-4 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/[0.07]">
+                <div>
+                  <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+                    <Disc3 className="w-4 h-4 text-[#b4e3be]" />
+                    <span>Studio Albums & Monitoring Scope</span>
+                  </h4>
+                  <p className="text-xs text-[#9aa0a6] mt-0.5">
+                    Select all studio albums, latest release only, or custom pick specific albums for Lidarr:
+                  </p>
+                </div>
+
+                {/* Scope Selection Pills */}
+                <div className="inline-flex p-1 rounded-full bg-[#1a1e28] border border-white/[0.08] self-start sm:self-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={selectAllStudioAlbums}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      albumSelectionMode === 'all'
+                        ? 'bg-[#b4e3be] text-[#072711] shadow-md'
+                        : 'text-[#9aa0a6] hover:text-white'
+                    }`}
+                  >
+                    <span>All Studio Albums</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={selectLatestAlbumOnly}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      albumSelectionMode === 'latest'
+                        ? 'bg-[#b4e3be] text-[#072711] shadow-md'
+                        : 'text-[#9aa0a6] hover:text-white'
+                    }`}
+                  >
+                    <span>Latest Only</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAlbumSelectionMode('custom')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      albumSelectionMode === 'custom'
+                        ? 'bg-[#b4e3be] text-[#072711] shadow-md'
+                        : 'text-[#9aa0a6] hover:text-white'
+                    }`}
+                  >
+                    <span>Custom</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Loading or Grid */}
+              {loadingArtistDetails ? (
+                <div className="p-8 flex flex-col items-center justify-center text-center gap-2 bg-[#1a1e28]/50 rounded-2xl border border-white/[0.05]">
+                  <Loader2 className="w-6 h-6 text-[#b4e3be] animate-spin" />
+                  <span className="text-xs text-[#9aa0a6] font-medium">Loading studio albums from Lidarr & Apple Music...</span>
+                </div>
+              ) : !artistDetails || artistDetails.studioAlbums.length === 0 ? (
+                <div className="p-6 text-center bg-[#1a1e28]/40 border border-dashed border-white/10 rounded-2xl">
+                  <p className="text-xs text-[#9aa0a6]">No studio albums cataloged yet. Lidarr will index full discography upon addition.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs bg-[#1a1e28]/60 p-2.5 px-3.5 rounded-2xl border border-white/[0.06]">
+                    <span className="font-semibold text-white">
+                      Selected: <span className="text-[#b4e3be] font-bold">{selectedAlbums.size}</span> of {artistDetails.studioAlbums.length} studio albums
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllStudioAlbums}
+                        className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white text-[11px] font-medium transition-colors cursor-pointer"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deselectAllStudioAlbums}
+                        className="px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-white text-[11px] font-medium transition-colors cursor-pointer"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Albums Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto custom-scrollbar p-1">
+                    {artistDetails.studioAlbums.map((album) => {
+                      const isSelected = selectedAlbums.has(album.id);
+                      return (
+                        <div
+                          key={album.id}
+                          onClick={() => handleToggleAlbum(album.id)}
+                          className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-[#14231b] border-[#b4e3be]/60 ring-1 ring-[#b4e3be]/30'
+                              : 'bg-[#14171f] border-white/[0.07] hover:border-white/20 opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="aspect-square w-full rounded-xl bg-[#0c0e12] overflow-hidden relative mb-2 shadow-sm">
+                            <MediaPoster
+                              src={album.coverUrl}
+                              alt={album.title}
+                              title={album.title}
+                              artistOrAuthor={item.authorOrArtist || item.title}
+                              mediaType="music"
+                              service="lidarr"
+                              aspectRatio="square"
+                              className="w-full h-full"
+                            />
+                            <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-md flex items-center justify-center ${
+                              isSelected ? 'bg-[#b4e3be] text-[#072711]' : 'bg-black/60 text-white/40 border border-white/20'
+                            }`}>
+                              {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                            </div>
+                            {album.year && (
+                              <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/80 text-[10px] font-mono text-white font-bold">
+                                {album.year}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-bold text-white line-clamp-1" title={album.title}>
+                              {album.title}
+                            </h5>
+                            <div className="flex items-center justify-between text-[10px] text-[#9aa0a6] mt-0.5">
+                              <span>{album.trackCount} tracks</span>
+                              <span className={isSelected ? 'text-[#b4e3be] font-bold' : 'text-slate-500'}>
+                                {isSelected ? 'Monitored' : 'Ignored'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

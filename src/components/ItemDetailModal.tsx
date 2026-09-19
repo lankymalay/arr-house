@@ -15,6 +15,7 @@ import {
   Check
 } from 'lucide-react';
 import type { MediaItem, TvShowDetails } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { MediaPoster } from './MediaPoster.js';
 
@@ -151,10 +152,14 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
 
               {/* Secondary metadata: Year, Quality, Service */}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-cyan-300 font-sans font-semibold">{item.year || 'Unknown'}</span>
-                <span className="text-slate-500">•</span>
+                {item.mediaType !== 'music' && item.service !== 'lidarr' && item.year ? (
+                  <>
+                    <span className="text-xs text-cyan-300 font-sans font-semibold">{item.year}</span>
+                    <span className="text-slate-500">•</span>
+                  </>
+                ) : null}
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${serviceBadgeClass}`}>
-                  {item.service}
+                  {getContentTypeLabel(item.service, item.mediaType)}
                 </span>
                 {item.qualityProfile && (
                   <>

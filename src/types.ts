@@ -12,6 +12,16 @@ export type ServiceId = 'sonarr' | 'radarr' | 'lidarr' | 'prowlarr';
 
 export type MediaType = 'tv' | 'movie' | 'music';
 
+export function getContentTypeLabel(service?: string, mediaType?: string): string {
+  const normType = (mediaType || '').toLowerCase();
+  const normService = (service || '').toLowerCase();
+  if (normType === 'tv' || normService === 'sonarr') return 'TV';
+  if (normType === 'movie' || normService === 'radarr') return 'Movie';
+  if (normType === 'music' || normService === 'lidarr') return 'Music';
+  if (normService === 'prowlarr') return 'Indexer';
+  return normType ? normType.toUpperCase() : normService ? normService.toUpperCase() : 'Media';
+}
+
 export interface ServiceConfig {
   id: ServiceId;
   name: string;
@@ -131,6 +141,26 @@ export interface ExternalReleaseItem {
   popularityScore: number;
 }
 
+export interface ForthcomingReleasesPayload {
+  generatedAt: string;
+  timeframe: {
+    startDate: string;
+    endDate: string;
+    months: { key: string; label: string; year: number; month: number }[];
+  };
+  counts: {
+    total: number;
+    tv: number;
+    movie: number;
+    music: number;
+  };
+  spotlight: ExternalReleaseItem[];
+  topTv: ExternalReleaseItem[];
+  topMovies: ExternalReleaseItem[];
+  topMusic: ExternalReleaseItem[];
+  all: ExternalReleaseItem[];
+}
+
 export interface ProwlarrIndexer {
   id: number;
   name: string;
@@ -169,6 +199,11 @@ export interface SearchResultItem {
   authorOrArtist?: string;
   seasonsCount?: number;
   albumCount?: number;
+  popularity?: number;
+  ratings?: {
+    votes?: number;
+    value?: number;
+  };
 }
 
 export interface TvEpisodeItem {
@@ -213,6 +248,7 @@ export interface AddContentPayload {
   monitorScope?: 'all' | 'specific_seasons' | 'specific_episodes';
   selectedSeasons?: number[];
   selectedEpisodes?: { season: number; episode: number }[];
+  selectedAlbums?: (string | number)[];
 }
 
 export interface AlbumTrackItem {

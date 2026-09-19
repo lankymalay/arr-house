@@ -15,6 +15,7 @@ import {
   Music
 } from 'lucide-react';
 import type { QueueItem, MediaItem, ProwlarrIndexer, DownloadHistoryItem } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { MediaPoster } from './MediaPoster.js';
 import { prefetchImage } from '../utils/prefetch.js';
@@ -219,7 +220,7 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/[0.08] text-white">
-                        {item.service}
+                        {getContentTypeLabel(item.service)}
                       </span>
                       <span className="text-xs text-[#9aa0a6] font-mono">
                         {item.downloadClient} • {item.protocol.toUpperCase()}
@@ -297,13 +298,26 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
                   badgeClass = 'bg-[#b4e3be]/15 text-[#b4e3be] border-[#b4e3be]/30';
                 }
 
-                const formattedDate = new Date(item.date).toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit'
-                });
+                let formattedDate = 'Recently';
+                if (item.date) {
+                  try {
+                    const parsed = new Date(item.date);
+                    if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 1970) {
+                      const res = parsed.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      });
+                      if (res && !res.toLowerCase().includes('invalid')) {
+                        formattedDate = res;
+                      }
+                    }
+                  } catch {
+                    // ignore
+                  }
+                }
 
                 return (
                   <div
@@ -317,7 +331,7 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${badgeClass}`}>
-                            {item.service}
+                            {getContentTypeLabel(item.service)}
                           </span>
                           <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#b4e3be]/15 text-[#b4e3be] border border-[#b4e3be]/30">
                             {item.eventType || 'Imported'}
@@ -403,9 +417,11 @@ export const QueueWaitlistView: React.FC<QueueWaitlistViewProps> = ({
                     <div>
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#e0d0b8]/15 text-[#e0d0b8]">
-                          {item.service}
+                          {getContentTypeLabel(item.service, item.mediaType)}
                         </span>
-                        <span className="text-xs text-[#9aa0a6] font-mono">{item.year}</span>
+                        {item.year && item.mediaType !== 'music' && item.service !== 'lidarr' && (
+                          <span className="text-xs text-[#9aa0a6] font-mono">{item.year}</span>
+                        )}
                       </div>
                       <h4 className="text-xs font-bold text-white truncate tracking-tight">{item.title}</h4>
                       <p className="text-[11px] text-[#9aa0a6] truncate mt-0.5">{item.artist || item.author || item.qualityProfile}</p>

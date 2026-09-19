@@ -751,20 +751,68 @@ export async function getCalendarEvents(forceRefresh = false): Promise<CalendarE
       }
       if (!Array.isArray(data)) return [];
 
-      return data.map((item: any) => ({
-        id: `${svc.id}-cal-${item.id}`,
-        service: svc.id,
-        mediaType,
-        title: item.title || item.episodeFile?.filename || 'Scheduled Release',
-        seriesOrArtistTitle: item.series?.title || item.movie?.title || item.artist?.artistName || item.title,
-        date: item.airDateUtc ? item.airDateUtc.split('T')[0] : (item.inCinemas || item.physicalRelease || startDate),
-        airDateUtc: item.airDateUtc || item.inCinemas || new Date().toISOString(),
-        episodeNumber: item.episodeNumber ? `S${String(item.seasonNumber).padStart(2, '0')}E${String(item.episodeNumber).padStart(2, '0')}` : undefined,
-        seasonNumber: item.seasonNumber,
-        hasFile: !!item.hasFile,
-        monitored: !!item.monitored,
-        overview: item.overview || ''
-      }));
+      return data.map((item: any) => {
+        // Collect candidate date fields from service
+        let rawDateStr: string | null = null;
+        if (svc.id === 'sonarr') {
+          rawDateStr = item.airDate || item.airDateUtc;
+        } else if (svc.id === 'radarr') {
+          // Prefer digital or cinema or physical release
+          const candidates = [item.digitalRelease, item.inCinemas, item.physicalRelease, item.airDateUtc];
+          for (const cand of candidates) {
+            if (cand && typeof cand === 'string' && !cand.startsWith('0001') && !cand.startsWith('1970')) {
+              rawDateStr = cand;
+              break;
+            }
+          }
+        } else if (svc.id === 'lidarr') {
+          const candidates = [item.releaseDate, item.airDateUtc, item.artist?.releaseDate];
+          for (const cand of candidates) {
+            if (cand && typeof cand === 'string' && !cand.startsWith('0001') && !cand.startsWith('1970')) {
+              rawDateStr = cand;
+              break;
+            }
+          }
+        } else {
+          rawDateStr = item.airDateUtc || item.releaseDate || item.inCinemas;
+        }
+
+        // Clean to strict YYYY-MM-DD
+        let cleanDate = startDate;
+        if (rawDateStr && typeof rawDateStr === 'string' && !rawDateStr.startsWith('0001')) {
+          const match = rawDateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            const yr = parseInt(match[1], 10);
+            if (yr >= 1970 && yr <= 2100) {
+              cleanDate = `${match[1]}-${match[2]}-${match[3]}`;
+            }
+          } else {
+            const parsed = new Date(rawDateStr);
+            if (!isNaN(parsed.getTime()) && parsed.getUTCFullYear() >= 1970 && parsed.getUTCFullYear() <= 2100) {
+              cleanDate = parsed.toISOString().split('T')[0];
+            }
+          }
+        }
+
+        const airDateUtc = (rawDateStr && typeof rawDateStr === 'string' && !rawDateStr.startsWith('0001'))
+          ? (rawDateStr.includes('T') ? rawDateStr : `${cleanDate}T00:00:00Z`)
+          : `${cleanDate}T00:00:00Z`;
+
+        return {
+          id: `${svc.id}-cal-${item.id}`,
+          service: svc.id,
+          mediaType,
+          title: item.title || item.episodeFile?.filename || 'Scheduled Release',
+          seriesOrArtistTitle: item.series?.title || item.movie?.title || item.artist?.artistName || item.title,
+          date: cleanDate,
+          airDateUtc,
+          episodeNumber: item.episodeNumber ? `S${String(item.seasonNumber).padStart(2, '0')}E${String(item.episodeNumber).padStart(2, '0')}` : undefined,
+          seasonNumber: item.seasonNumber,
+          hasFile: !!item.hasFile,
+          monitored: !!item.monitored,
+          overview: item.overview || ''
+        };
+      });
     } catch {
       return [];
     }

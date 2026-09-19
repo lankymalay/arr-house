@@ -12,17 +12,25 @@ import {
   X
 } from 'lucide-react';
 import type { CalendarEvent, ServiceId } from '../types.js';
+import { getContentTypeLabel } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 
 interface CalendarViewProps {
   events: CalendarEvent[];
   calendarToken: string;
+  initialViewMode?: 'month' | 'agenda';
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToken }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToken, initialViewMode = 'month' }) => {
   const { success } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
+  const [viewMode, setViewMode] = useState<'month' | 'agenda'>(initialViewMode);
+
+  React.useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode]);
   const [enabledServices, setEnabledServices] = useState<Record<ServiceId, boolean>>({
     sonarr: true,
     radarr: true,
@@ -58,45 +66,107 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
 
   const getDayEvents = (dayNumber: number) => {
     const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
-    return filteredEvents.filter(e => e.date === dStr);
+    return filteredEvents.filter(e => {
+      if (!e.date) return false;
+      const cleanDate = e.date.split('T')[0];
+      return cleanDate === dStr;
+    });
   };
 
   // Group filtered events by date for Schedule/Agenda view
   const groupedAgendaEvents = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
-    const sorted = [...filteredEvents].sort((a, b) => a.date.localeCompare(b.date));
+    const sorted = [...filteredEvents].sort((a, b) => {
+      const dateA = (a.date || '').split('T')[0];
+      const dateB = (b.date || '').split('T')[0];
+      return dateA.localeCompare(dateB);
+    });
     for (const ev of sorted) {
-      if (!map[ev.date]) {
-        map[ev.date] = [];
+      const cleanDate = ev.date ? ev.date.split('T')[0] : 'TBD';
+      if (!map[cleanDate]) {
+        map[cleanDate] = [];
       }
-      map[ev.date].push(ev);
+      map[cleanDate].push(ev);
     }
     return Object.entries(map);
   }, [filteredEvents]);
 
   const formatScheduleHeader = (dateStr: string) => {
     try {
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const evDate = new Date(y, m - 1, d);
+      if (!dateStr || typeof dateStr !== 'string' || dateStr === 'TBD' || dateStr.toLowerCase().includes('invalid')) {
+        return { formatted: 'Release Date TBD', relative: '' };
+      }
+
+      const clean = dateStr.split('T')[0];
+      const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      let evDate: Date | null = null;
+      if (match) {
+        const y = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const d = parseInt(match[3], 10);
+        if (y >= 1970 && y <= 2100) {
+          evDate = new Date(y, m - 1, d);
+        }
+      } else {
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= 1970 && parsed.getFullYear() <= 2100) {
+          evDate = parsed;
+        }
+      }
+
+      if (!evDate || isNaN(evDate.getTime())) {
+        return { formatted: 'Release Date TBD', relative: '' };
+      }
+
       const now = new Date();
       const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const diffDays = Math.round((evDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+      const eventPureDate = new Date(evDate.getFullYear(), evDate.getMonth(), evDate.getDate());
+      const diffDays = Math.round((eventPureDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
 
       let relative = '';
       if (diffDays === 0) relative = 'Today';
       else if (diffDays === 1) relative = 'Tomorrow';
       else if (diffDays === -1) relative = 'Yesterday';
       else if (diffDays > 1 && diffDays <= 7) relative = `In ${diffDays} days`;
+      else if (diffDays < -1 && diffDays >= -7) relative = `${Math.abs(diffDays)} days ago`;
 
       const formatted = evDate.toLocaleDateString('en-US', {
         weekday: 'short',
         month: 'short',
         day: 'numeric'
       });
+
+      if (!formatted || formatted.toLowerCase().includes('invalid')) {
+        return { formatted: 'Release Date TBD', relative: '' };
+      }
+
       return { formatted, relative };
     } catch {
-      return { formatted: dateStr, relative: '' };
+      return { formatted: 'Release Date TBD', relative: '' };
     }
+  };
+
+  const formatModalDate = (dateStr?: string) => {
+    if (!dateStr || dateStr === 'TBD' || dateStr.toLowerCase().includes('invalid')) return 'Date TBD';
+    const clean = dateStr.split('T')[0];
+    const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const y = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const d = parseInt(match[3], 10);
+      if (y >= 1970 && y <= 2100) {
+        const dateObj = new Date(y, m - 1, d);
+        if (!isNaN(dateObj.getTime())) {
+          return dateObj.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        }
+      }
+    }
+    return dateStr;
   };
 
   // Build calendar matrix days
@@ -151,47 +221,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Calendar Top Controls */}
-      <div className="flex items-center justify-end gap-2 flex-wrap">
-        {/* Subscribe to iCal Feed Button */}
-        <button
-          id="subscribe-calendar-btn"
-          onClick={() => setShowSubscribeModal(true)}
-          className="px-4 py-2 rounded-full bg-[#14171f] hover:bg-[#1a1e28] text-white border border-white/[0.08] text-xs font-bold flex items-center gap-2 transition-all cursor-pointer pixel-pill"
-        >
-          <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
-          <span>Sync iCal Feed</span>
-        </button>
-
-        {/* View toggle capsule (Desktop option for both Month & Agenda) */}
-        <div className="hidden md:flex items-center bg-[#14171f] p-1 rounded-full border border-white/[0.08]">
-          <button
-            onClick={() => setViewMode('month')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
-              viewMode === 'month' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
-            }`}
-          >
-            Month Grid
-          </button>
-          <button
-            onClick={() => setViewMode('agenda')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill ${
-              viewMode === 'agenda' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
-            }`}
-          >
-            Schedule
-          </button>
-        </div>
-
-        {/* Mobile indicator (Calendar is agenda/schedule on mobile) */}
-        <div className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#14171f] border border-white/[0.08] text-[11px] font-medium text-slate-300">
-          <CalendarIcon className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Schedule View</span>
-        </div>
-      </div>
-
-      {/* Filter and Navigation Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#14171f] border border-white/[0.07] p-3.5 rounded-2xl">
+      {/* Filter and Navigation Bar (Main Content Controls) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#14171f] border border-white/[0.07] p-3.5 sm:p-4 rounded-2xl shadow-sm">
         {/* Month Picker Controls */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 bg-[#1a1e28] border border-white/[0.08] rounded-full p-1">
@@ -222,42 +253,78 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
           </h3>
         </div>
 
-        {/* Service Filters - Pixel Capsule Chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            onClick={() => toggleService('sonarr')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
-              enabledServices.sonarr 
-                ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 font-bold shadow-sm' 
-                : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
-            }`}
-          >
-            <Tv className="w-3.5 h-3.5" />
-            <span>TV (Sonarr)</span>
-          </button>
+        {/* View toggle (Month Grid / Schedule), Service Filters & Sync iCal Feed */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* View toggle capsule: Month Grid & Schedule */}
+          <div className="flex items-center bg-[#1a1e28] p-1 rounded-full border border-white/[0.08]">
+            <button
+              id="calendar-view-month-btn"
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill cursor-pointer ${
+                viewMode === 'month' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              }`}
+            >
+              Month Grid
+            </button>
+            <button
+              id="calendar-view-schedule-btn"
+              onClick={() => setViewMode('agenda')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all pixel-pill cursor-pointer ${
+                viewMode === 'agenda' ? 'bg-white text-black font-bold shadow-sm' : 'text-[#9aa0a6] hover:text-white'
+              }`}
+            >
+              Schedule
+            </button>
+          </div>
 
-          <button
-            onClick={() => toggleService('radarr')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
-              enabledServices.radarr 
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold shadow-sm' 
-                : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
-            }`}
-          >
-            <Film className="w-3.5 h-3.5" />
-            <span>Movies (Radarr)</span>
-          </button>
+          {/* Service Filters - Pixel Capsule Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => toggleService('sonarr')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
+                enabledServices.sonarr 
+                  ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 font-bold shadow-sm' 
+                  : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
+              }`}
+            >
+              <Tv className="w-3.5 h-3.5" />
+              <span>TV</span>
+            </button>
 
+            <button
+              onClick={() => toggleService('radarr')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
+                enabledServices.radarr 
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold shadow-sm' 
+                  : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
+              }`}
+            >
+              <Film className="w-3.5 h-3.5" />
+              <span>Movies</span>
+            </button>
+
+            <button
+              onClick={() => toggleService('lidarr')}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
+                enabledServices.lidarr 
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold shadow-sm' 
+                  : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
+              }`}
+            >
+              <Music className="w-3.5 h-3.5" />
+              <span>Music</span>
+            </button>
+          </div>
+
+          {/* Subscribe / Sync iCal Feed Button */}
           <button
-            onClick={() => toggleService('lidarr')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all border pixel-pill cursor-pointer ${
-              enabledServices.lidarr 
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold shadow-sm' 
-                : 'bg-[#151b29] text-slate-400 border-[#26334a] hover:text-white'
-            }`}
+            id="subscribe-calendar-btn"
+            onClick={() => setShowSubscribeModal(true)}
+            className="px-3.5 py-1.5 rounded-full bg-[#1a1e28] hover:bg-[#222734] text-white border border-white/[0.08] hover:border-white/20 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer pixel-pill shrink-0"
+            title="Subscribe to iCal calendar feed"
           >
-            <Music className="w-3.5 h-3.5" />
-            <span>Music (Lidarr)</span>
+            <Download className="w-3.5 h-3.5 text-[#b4e3be]" />
+            <span>Sync iCal Feed</span>
           </button>
         </div>
       </div>
@@ -311,7 +378,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
                             >
                               <div className="flex items-center gap-3 min-w-0">
                                 <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full shrink-0 shadow-xs ${style.badge}`}>
-                                  {ev.service}
+                                  {getContentTypeLabel(ev.service)}
                                 </span>
                                 <div className="min-w-0">
                                   <h4 className="text-sm font-semibold text-white truncate tracking-tight group-hover:text-indigo-300 transition-colors">
@@ -446,7 +513,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
             <div className="flex items-start justify-between">
               <div>
                 <span className={`text-[10px] font-medium uppercase px-2 py-0.5 rounded-full ${getServiceStyles(selectedEvent.service).badge}`}>
-                  {selectedEvent.service}
+                  {getContentTypeLabel(selectedEvent.service)}
                 </span>
                 <h3 className="text-lg font-semibold text-white mt-1.5 tracking-tight font-sans">
                   {selectedEvent.seriesOrArtistTitle || selectedEvent.title}
@@ -465,8 +532,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
 
             <div className="p-4 rounded-2xl bg-[#1a1e28] border border-white/[0.06] space-y-2 text-xs">
               <div className="flex justify-between text-[#9aa0a6]">
-                <span>Air Date:</span>
-                <strong className="text-white font-mono">{selectedEvent.date}</strong>
+                <span>{selectedEvent.mediaType === 'tv' || selectedEvent.service === 'sonarr' ? 'Air Date:' : 'Release Date:'}</span>
+                <strong className="text-white font-mono">{formatModalDate(selectedEvent.date)}</strong>
               </div>
               <div className="flex justify-between text-[#9aa0a6]">
                 <span>Status:</span>

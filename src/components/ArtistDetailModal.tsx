@@ -15,26 +15,41 @@ import {
   Layers,
   Sparkles,
   ArrowUpRight,
-  Radio
+  Radio,
+  Plus,
+  SlidersHorizontal,
+  Check
 } from 'lucide-react';
-import type { MediaItem, ArtistDetails, StudioAlbumItem } from '../types.js';
+import type { MediaItem, SearchResultItem, ArtistDetails, StudioAlbumItem } from '../types.js';
 import { useToast } from '../context/ToastContext.js';
 import { MediaPoster } from './MediaPoster.js';
 
 interface ArtistDetailModalProps {
-  item: MediaItem;
+  item: MediaItem | SearchResultItem;
   onClose: () => void;
-  onRefreshItem: () => void;
+  onRefreshItem?: () => void;
+  onAddArtist?: (item: SearchResultItem) => void;
 }
 
-export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onClose, onRefreshItem }) => {
+export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ 
+  item, 
+  onClose, 
+  onRefreshItem,
+  onAddArtist
+}) => {
   const { success, info } = useToast();
-  const [monitored, setMonitored] = useState(item.monitored ?? true);
+  const isSearchResult = 'foreignId' in item;
+  const initialInLibrary = 'alreadyInLibrary' in item ? !!item.alreadyInLibrary : true;
+  
+  const [inLibrary, setInLibrary] = useState(initialInLibrary);
+  const [monitored, setMonitored] = useState((item as any).monitored ?? true);
   const [artistDetails, setArtistDetails] = useState<ArtistDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addingArtist, setAddingArtist] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState<StudioAlbumItem | null>(null);
 
-  const artistName = item.artist || item.title;
+  const artistName = (item as any).authorOrArtist || (item as any).artist || item.title;
+  const artistId = (item as any).id || (item as any).foreignId || '';
 
   useEffect(() => {
     let isMounted = true;
@@ -43,7 +58,7 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
       try {
         const token = localStorage.getItem('arr_token');
         const res = await fetch(
-          `/api/arr/artist/details?artist=${encodeURIComponent(artistName)}&id=${encodeURIComponent(String(item.id))}`,
+          `/api/arr/artist/details?artist=${encodeURIComponent(artistName)}&id=${encodeURIComponent(String(artistId))}`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {}
           }
@@ -66,15 +81,55 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
     return () => {
       isMounted = false;
     };
-  }, [artistName, item.id]);
+  }, [artistName, artistId]);
 
   const handleForceSearch = (albumTitle?: string) => {
     const target = albumTitle ? `"${albumTitle}" by ${artistName}` : artistName;
     info('Search Dispatched', `Automated release scan sent to LIDARR for ${target}`);
     setTimeout(() => {
       success('Grab Task Scheduled', `Queued release for download client`);
-      onRefreshItem();
+      if (onRefreshItem) onRefreshItem();
     }, 1000);
+  };
+
+  const handleAddArtist = async () => {
+    setAddingArtist(true);
+    try {
+      const token = localStorage.getItem('arr_token');
+      const res = await fetch('/api/arr/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          service: 'lidarr',
+          title: artistName,
+          qualityProfileId: 1,
+          rootFolderPath: '/data/media/music',
+          monitored: true,
+          searchForMissing: true,
+          foreignId: artistId,
+          metadata: {
+            posterUrl: item.posterUrl,
+            genres: artistDetails?.genres || item.genres,
+            overview: artistDetails?.overview || item.overview
+          }
+        })
+      });
+      if (res.ok) {
+        setInLibrary(true);
+        success('Artist Added', `"${artistName}" was successfully added to your Lidarr music collection!`);
+        if (onRefreshItem) onRefreshItem();
+      } else {
+        const data = await res.json();
+        info('Notice', data.error || 'Artist could not be added');
+      }
+    } catch (err: any) {
+      info('Notice', err.message || 'Failed to add artist');
+    } finally {
+      setAddingArtist(false);
+    }
   };
 
   const handleToggleMonitored = () => {
@@ -140,11 +195,17 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Artist • Lidarr
+                  {inLibrary ? 'Artist • Lidarr' : 'Discovered Artist • Lidarr'}
                 </span>
                 <span className="text-xs text-slate-300 font-medium">
-                  {albumsList.length > 0 ? `${albumsList.length} Studio Albums` : 'Music Library'}
+                  {albumsList.length > 0 ? `${albumsList.length} Studio Albums` : 'Discography'}
                 </span>
+                {inLibrary && (
+                  <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20 flex items-center gap-1">
+                    <Check className="w-2.5 h-2.5" />
+                    <span>In Library</span>
+                  </span>
+                )}
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-black text-white truncate font-sans tracking-tight mb-2" title={artistName}>
@@ -163,26 +224,53 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
 
             {/* Top Quick Actions */}
             <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-              <button
-                onClick={handleToggleMonitored}
-                className={`px-3.5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer ${
-                  monitored 
-                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25' 
-                    : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
-                }`}
-              >
-                {monitored ? <BookmarkCheck className="w-4 h-4 text-emerald-400" /> : <Bookmark className="w-4 h-4" />}
-                <span>{monitored ? 'Monitored' : 'Unmonitored'}</span>
-              </button>
+              {inLibrary ? (
+                <>
+                  <button
+                    onClick={handleToggleMonitored}
+                    className={`px-3.5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer ${
+                      monitored 
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25' 
+                        : 'bg-white/5 text-slate-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {monitored ? <BookmarkCheck className="w-4 h-4 text-emerald-400" /> : <Bookmark className="w-4 h-4" />}
+                    <span>{monitored ? 'Monitored' : 'Unmonitored'}</span>
+                  </button>
 
-              <button
-                onClick={() => handleForceSearch()}
-                className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all cursor-pointer"
-                title="Search missing tracks in Lidarr"
-              >
-                <Search className="w-3.5 h-3.5" />
-                <span>Search Artist</span>
-              </button>
+                  <button
+                    onClick={() => handleForceSearch()}
+                    className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all cursor-pointer"
+                    title="Search missing tracks in Lidarr"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Search Artist</span>
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {onAddArtist && isSearchResult && (
+                    <button
+                      onClick={() => onAddArtist(item as SearchResultItem)}
+                      className="px-3.5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Configure monitoring scope & quality profile"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>Configure & Add</span>
+                    </button>
+                  )}
+                  <button
+                    id="add-artist-to-library-top-btn"
+                    onClick={handleAddArtist}
+                    disabled={addingArtist}
+                    className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all cursor-pointer disabled:opacity-50 pixel-pill"
+                    title="Add this artist and monitor their studio albums in Lidarr"
+                  >
+                    {addingArtist ? <Disc3 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    <span>{addingArtist ? 'Adding...' : 'Add to Lidarr'}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -194,20 +282,27 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
             <div className="bg-[#141a27] p-3.5 rounded-2xl border border-white/[0.08]">
               <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Library Status</span>
               <div className="flex items-center gap-1.5">
-                {item.status === 'downloaded' ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs font-bold text-white">Complete</span>
-                  </>
-                ) : item.status === 'downloading' ? (
-                  <>
-                    <CircleDot className="w-4 h-4 text-amber-400 animate-pulse" />
-                    <span className="text-xs font-bold text-amber-400">Downloading</span>
-                  </>
+                {inLibrary ? (
+                  (item as any).status === 'downloaded' ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-white">Complete</span>
+                    </>
+                  ) : (item as any).status === 'downloading' ? (
+                    <>
+                      <CircleDot className="w-4 h-4 text-amber-400 animate-pulse" />
+                      <span className="text-xs font-bold text-amber-400">Downloading</span>
+                    </>
+                  ) : (
+                    <>
+                      <CircleDot className="w-4 h-4 text-slate-400" />
+                      <span className="text-xs font-bold text-slate-300">Monitored</span>
+                    </>
+                  )
                 ) : (
                   <>
-                    <CircleDot className="w-4 h-4 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-300">Monitored</span>
+                    <CircleDot className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-amber-300">Ready to Add</span>
                   </>
                 )}
               </div>
@@ -218,7 +313,7 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
               <div className="flex items-center gap-1.5">
                 <HardDrive className="w-4 h-4 text-cyan-400" />
                 <span className="text-xs font-bold text-white font-mono">
-                  {item.sizeBytes ? formatBytes(item.sizeBytes) : '0 B (Missing)'}
+                  {(item as any).sizeBytes ? formatBytes((item as any).sizeBytes) : (inLibrary ? '0 B (Missing)' : 'Not Downloaded')}
                 </span>
               </div>
             </div>
@@ -228,7 +323,7 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
               <div className="flex items-center gap-1.5">
                 <Disc3 className="w-4 h-4 text-emerald-400" />
                 <span className="text-xs font-bold text-white font-mono">
-                  {albumsList.length} Recorded
+                  {albumsList.length} Studio
                 </span>
               </div>
             </div>
@@ -243,11 +338,80 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
           </div>
 
           {/* Host Path (if available) */}
-          {item.path && (
+          {(item as any).path && (
             <div className="bg-[#141a27] p-3.5 rounded-2xl border border-white/[0.08] flex items-center gap-2 text-xs">
               <Folder className="w-4 h-4 text-slate-400 shrink-0" />
               <span className="text-slate-300 font-medium">Library Path:</span>
-              <span className="text-white font-mono truncate">{item.path}</span>
+              <span className="text-white font-mono truncate">{(item as any).path}</span>
+            </div>
+          )}
+
+          {/* Overview / Bio (if available) */}
+          {(artistDetails?.overview || item.overview) && (
+            <div className="bg-[#141a27] p-4 rounded-2xl border border-white/[0.08]">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Artist Bio & Discography Summary</h4>
+              <p className="text-xs text-slate-300 leading-relaxed line-clamp-3">
+                {artistDetails?.overview || item.overview}
+              </p>
+            </div>
+          )}
+
+          {/* Selected Album Details Callout Banner */}
+          {selectedAlbum && (
+            <div className="bg-gradient-to-r from-[#162720] via-[#141e2b] to-[#10141f] p-4 rounded-2xl border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-fadeIn">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-14 h-14 rounded-xl bg-black overflow-hidden shrink-0 border border-white/20 shadow-md">
+                  <MediaPoster
+                    src={selectedAlbum.coverUrl}
+                    alt={selectedAlbum.title}
+                    title={selectedAlbum.title}
+                    artistOrAuthor={artistName}
+                    mediaType="music"
+                    service="lidarr"
+                    aspectRatio="square"
+                    className="w-full h-full"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Studio Album
+                    </span>
+                    {selectedAlbum.year && (
+                      <span className="text-xs text-slate-300 font-mono font-medium">{selectedAlbum.year}</span>
+                    )}
+                  </div>
+                  <h4 className="text-sm font-extrabold text-white truncate" title={selectedAlbum.title}>
+                    {selectedAlbum.title}
+                  </h4>
+                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                    <span>{selectedAlbum.trackCount} Tracks</span>
+                    {selectedAlbum.releaseDate && (
+                      <span>Released: {selectedAlbum.releaseDate}</span>
+                    )}
+                    {selectedAlbum.genre && (
+                      <span className="text-slate-300 font-medium">{selectedAlbum.genre}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <button
+                  onClick={() => handleForceSearch(selectedAlbum.title)}
+                  className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Grab Album</span>
+                </button>
+                <button
+                  onClick={() => setSelectedAlbum(null)}
+                  className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white cursor-pointer transition-colors"
+                  title="Dismiss album detail"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -260,29 +424,29 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                    Main Studio Albums
+                    Studio Albums
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Discography and core album releases for {artistName}
+                    Core studio discography and featured LP releases for {artistName}
                   </p>
                 </div>
               </div>
 
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/[0.06] text-slate-300 border border-white/10">
-                {albumsList.length} Albums
+                {albumsList.length} Studio Albums
               </span>
             </div>
 
             {loading ? (
               <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
                 <Disc3 className="w-8 h-8 animate-spin text-emerald-400" />
-                <span className="text-xs font-medium">Loading studio albums for {artistName}...</span>
+                <span className="text-xs font-medium">Cataloging studio albums for {artistName}...</span>
               </div>
             ) : albumsList.length === 0 ? (
               <div className="py-10 text-center border border-dashed border-white/10 rounded-2xl bg-[#141a27]/40 p-6">
                 <Disc3 className="w-8 h-8 text-slate-500 mx-auto mb-2 opacity-50" />
                 <p className="text-sm font-medium text-slate-300">No studio albums cataloged yet</p>
-                <p className="text-xs text-slate-500 mt-1">Use interactive search or trigger a Lidarr sync to scan this artist.</p>
+                <p className="text-xs text-slate-500 mt-1">Lidarr will catalog full studio albums once added to library.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
@@ -325,7 +489,7 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
                             handleForceSearch(album.title);
                           }}
                           className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 hover:bg-emerald-600 text-white transition opacity-0 group-hover:opacity-100 shadow-md backdrop-blur-xs"
-                          title={`Search ${album.title}`}
+                          title={`Grab ${album.title}`}
                         >
                           <Search className="w-3.5 h-3.5" />
                         </button>
@@ -370,16 +534,29 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({ item, onCl
             >
               Done
             </button>
-            <button
-              onClick={() => handleForceSearch()}
-              className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all cursor-pointer pixel-pill"
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span>Interactive Grab</span>
-            </button>
+            {inLibrary ? (
+              <button
+                onClick={() => handleForceSearch()}
+                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all cursor-pointer pixel-pill"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Interactive Grab</span>
+              </button>
+            ) : (
+              <button
+                id="add-artist-and-albums-bottom-btn"
+                onClick={handleAddArtist}
+                disabled={addingArtist}
+                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all cursor-pointer pixel-pill disabled:opacity-50"
+              >
+                {addingArtist ? <Disc3 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                <span>Add Artist & All Studio Albums</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
+
