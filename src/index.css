@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    /* Clear, Vibrant, High-Contrast Dark Theme */
+    --theme-bg-main: #0d111a;
+    --theme-bg-surface: #121824;
+    --theme-bg-card: #161e2e;
+    --theme-bg-card-hover: #1c263a;
+    --theme-bg-muted: #1c273c;
+    --theme-bg-elevated: #212c42;
+    --theme-bg-input: #0f1522;
+
+    --theme-border: #2d3c54;
+    --theme-border-subtle: #222e42;
+    --theme-border-hover: #4b6288;
+
+    --theme-text-primary: #ffffff;
+    --theme-text-secondary: #e2e8f0;
+    --theme-text-muted: #94a3b8;
+    --theme-header-bg: rgba(18, 24, 36, 0.96);
+
+    /* Clear Vibrant Palette - Rich, High-Luminance Accents */
+    --accent-indigo: #6366f1;
+    --accent-indigo-glow: rgba(99, 102, 241, 0.3);
+    --accent-cyan: #00c8ff;
+    --accent-cyan-glow: rgba(0, 200, 255, 0.3);
+    --accent-emerald: #10b981;
+    --accent-emerald-glow: rgba(16, 185, 129, 0.3);
+    --accent-amber: #f59e0b;
+    --accent-amber-glow: rgba(245, 158, 11, 0.3);
+    --accent-rose: #f43f5e;
+    --accent-rose-glow: rgba(244, 63, 94, 0.3);
+    --accent-purple: #8b5cf6;
+    --accent-purple-glow: rgba(139, 92, 246, 0.3);
+
+    --theme-scrollbar-track: #0d111a;
+    --theme-scrollbar-thumb: #2d3c54;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--theme-bg-main);
+    color: var(--theme-text-primary);
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tone down heavy bold styles across the application for a modern, refined aesthetic */
+  .font-extrabold {
+    font-weight: 600 !important;
+  }
+  .font-bold {
+    font-weight: 500 !important;
+  }
+
+  /* Universal Readability Enhancements for Dark Mode */
+  .text-slate-400 {
+    color: #cbd5e1;
+  }
+  .text-slate-500 {
+    color: #94a3b8;
+  }
+  .text-slate-600 {
+    color: #94a3b8;
+  }
+}
+
+/* Keyboard Focus Visibility — clear ring for tab navigation, invisible for mouse */
+*:focus-visible {
+  outline: 2px solid var(--accent-indigo);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Smooth input transitions */
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Sound Wave Animation */
+@keyframes sonosWave {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+.animate-sonos-wave-1 {
+  animation: sonosWave 1.2s ease-in-out infinite;
+}
+.animate-sonos-wave-2 {
+  animation: sonosWave 0.9s ease-in-out infinite 0.2s;
+}
+.animate-sonos-wave-3 {
+  animation: sonosWave 1.4s ease-in-out infinite 0.4s;
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out both;
+}
+
+/* Shimmer skeleton loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--theme-bg-card) 25%,
+    var(--theme-bg-card-hover) 50%,
+    var(--theme-bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Tactile Pill & Button Utilities */
+.pixel-pill {
+  border-radius: 9999px;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.pixel-pill:active {
+  transform: scale(0.97);
+}
+
+/* Semantic Theme Card Component */
+.theme-card,
+.sonos-card {
+  background-color: var(--theme-bg-card);
+  border: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, backdrop-filter 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.theme-card:hover,
+.sonos-card:hover {
+  border-color: var(--theme-border-hover);
+  background-color: var(--theme-bg-card-hover);
+  backdrop-filter: saturate(1.2);
+}
+
+/* Glass Card — frosted glass effect for elevated containers */
+.glass-card {
+  background: rgba(22, 30, 46, 0.7);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid var(--theme-border);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* App Shell Root */
+.app-shell {
+  background-color: var(--theme-bg-main);
+  color: var(--theme-text-primary);
+  min-height: 100vh;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom High-Contrast Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+  border-radius: 9999px;
+  border: 1px solid var(--theme-border-subtle);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-indigo);
+}
