@@ -223,35 +223,43 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Filter and Navigation Bar (Main Content Controls) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#14171f] border border-white/[0.07] p-3.5 sm:p-4 rounded-2xl shadow-sm">
-        {/* Month Picker Controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-[#1a1e28] border border-white/[0.08] rounded-full p-1">
-            <button
-              onClick={prevMonth}
-              className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
-              title="Previous Month"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={today}
-              className="px-3 py-1 text-xs font-bold text-white hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer pixel-pill"
-            >
-              Today
-            </button>
-            <button
-              onClick={nextMonth}
-              className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
-              title="Next Month"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+        {/* Month Picker Controls (Only shown in Month Grid view) */}
+        {viewMode === 'month' ? (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-[#1a1e28] border border-white/[0.08] rounded-full p-1">
+              <button
+                onClick={prevMonth}
+                className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
+                title="Previous Month"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={today}
+                className="px-3 py-1 text-xs font-bold text-white hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer pixel-pill"
+              >
+                Today
+              </button>
+              <button
+                onClick={nextMonth}
+                className="p-1.5 rounded-full text-[#9aa0a6] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer pixel-pill"
+                title="Next Month"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
 
-          <h3 className="text-lg font-semibold text-white tracking-tight font-sans">
-            {monthNames[month]} {year}
-          </h3>
-        </div>
+            <h3 className="text-lg font-semibold text-white tracking-tight font-sans">
+              {monthNames[month]} {year}
+            </h3>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-white tracking-tight font-sans">
+              Upcoming Schedule
+            </h3>
+          </div>
+        )}
 
         {/* View toggle (Month Grid / Schedule), Service Filters & Sync iCal Feed */}
         <div className="flex items-center gap-2.5 flex-wrap">
