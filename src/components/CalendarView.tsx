@@ -73,22 +73,36 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
     });
   };
 
-  // Group filtered events by date for Schedule/Agenda view
+  // Group filtered events by date for Schedule/Agenda view starting with Today
   const groupedAgendaEvents = useMemo(() => {
-    const map: Record<string, CalendarEvent[]> = {};
-    const sorted = [...filteredEvents].sort((a, b) => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // Filter to events from today onwards
+    const upcomingEvents = filteredEvents.filter((ev) => {
+      if (!ev.date) return false;
+      const cleanDate = ev.date.split('T')[0];
+      return cleanDate >= todayStr;
+    });
+
+    const sorted = [...upcomingEvents].sort((a, b) => {
       const dateA = (a.date || '').split('T')[0];
       const dateB = (b.date || '').split('T')[0];
       return dateA.localeCompare(dateB);
     });
+
+    const map = new Map<string, CalendarEvent[]>();
+    // Always start the schedule with Today's date
+    map.set(todayStr, []);
+
     for (const ev of sorted) {
       const cleanDate = ev.date ? ev.date.split('T')[0] : 'TBD';
-      if (!map[cleanDate]) {
-        map[cleanDate] = [];
+      if (!map.has(cleanDate)) {
+        map.set(cleanDate, []);
       }
-      map[cleanDate].push(ev);
+      map.get(cleanDate)!.push(ev);
     }
-    return Object.entries(map);
+    return Array.from(map.entries());
   }, [filteredEvents]);
 
   const formatScheduleHeader = (dateStr: string) => {
@@ -376,40 +390,46 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ events, calendarToke
 
                       {/* Day Events Cards */}
                       <div className="space-y-2">
-                        {dayEvents.map((ev) => {
-                          const style = getServiceStyles(ev.service);
-                          return (
-                            <div
-                              key={ev.id}
-                              onClick={() => setSelectedEvent(ev)}
-                              className="p-3.5 sm:p-4 rounded-2xl bg-[#1a1e28] hover:bg-[#202634] border border-white/[0.06] hover:border-white/20 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-sm"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full shrink-0 shadow-xs ${style.badge}`}>
-                                  {getContentTypeLabel(ev.service)}
-                                </span>
-                                <div className="min-w-0">
-                                  <h4 className="text-sm font-semibold text-white truncate tracking-tight group-hover:text-indigo-300 transition-colors">
-                                    {ev.seriesOrArtistTitle || ev.title}
-                                  </h4>
-                                  <p className="text-xs text-[#9aa0a6] truncate mt-0.5">
-                                    {ev.title}
-                                  </p>
+                        {dayEvents.length === 0 ? (
+                          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#1a1e28]/50 border border-white/[0.05] text-xs text-slate-400 italic">
+                            No releases scheduled for today
+                          </div>
+                        ) : (
+                          dayEvents.map((ev) => {
+                            const style = getServiceStyles(ev.service);
+                            return (
+                              <div
+                                key={ev.id}
+                                onClick={() => setSelectedEvent(ev)}
+                                className="p-3.5 sm:p-4 rounded-2xl bg-[#1a1e28] hover:bg-[#202634] border border-white/[0.06] hover:border-white/20 flex items-center justify-between gap-3 transition-all cursor-pointer group shadow-sm"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full shrink-0 shadow-xs ${style.badge}`}>
+                                    {getContentTypeLabel(ev.service)}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <h4 className="text-sm font-semibold text-white truncate tracking-tight group-hover:text-indigo-300 transition-colors">
+                                      {ev.seriesOrArtistTitle || ev.title}
+                                    </h4>
+                                    <p className="text-xs text-[#9aa0a6] truncate mt-0.5">
+                                      {ev.title}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
+                                    ev.hasFile 
+                                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                                      : 'bg-[#151a26] text-slate-400 border-white/[0.08]'
+                                  }`}>
+                                    {ev.hasFile ? 'Downloaded' : 'Monitored'}
+                                  </span>
                                 </div>
                               </div>
-
-                              <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                                  ev.hasFile 
-                                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
-                                    : 'bg-[#151a26] text-slate-400 border-white/[0.08]'
-                                }`}>
-                                  {ev.hasFile ? 'Downloaded' : 'Monitored'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   );
