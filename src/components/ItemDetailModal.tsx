@@ -16,7 +16,8 @@ import {
   Check,
   Zap,
   DownloadCloud,
-  Star
+  Star,
+  ShieldCheck
 } from 'lucide-react';
 import type { MediaItem, TvShowDetails } from '../types.js';
 import { getContentTypeLabel } from '../types.js';
@@ -91,7 +92,10 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
           mediaType: item.mediaType,
           posterUrl: item.posterUrl,
           mode: 'fast',
-          foreignId: item.id
+          foreignId: item.id,
+          imdbId: item.imdbId || tvDetails?.imdbId,
+          tvdbId: item.tvdbId || tvDetails?.tvdbId,
+          tmdbId: item.tmdbId
         })
       });
 
@@ -211,6 +215,24 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${serviceBadgeClass}`}>
                   {getContentTypeLabel(item.service, item.mediaType)}
                 </span>
+                {(item.imdbId || tvDetails?.imdbId) && (
+                  <span
+                    className="text-[10px] font-mono font-medium text-amber-300 bg-amber-950/70 border border-amber-700/50 px-2 py-0.5 rounded-full flex items-center gap-1"
+                    title="Authoritative IMDb ID"
+                  >
+                    <ShieldCheck className="w-3 h-3 text-amber-400" />
+                    <span>IMDb: {item.imdbId || tvDetails?.imdbId}</span>
+                  </span>
+                )}
+                {(item.tvdbId || tvDetails?.tvdbId) && (
+                  <span
+                    className="text-[10px] font-mono font-medium text-emerald-300 bg-emerald-950/70 border border-emerald-700/50 px-2 py-0.5 rounded-full flex items-center gap-1"
+                    title="Authoritative TheTVDB ID"
+                  >
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <span>TVDB: {item.tvdbId || tvDetails?.tvdbId}</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -378,6 +400,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
                                       year: item.year,
                                       mediaType: 'tv',
                                       foreignId: item.id,
+                                      imdbId: item.imdbId || tvDetails?.imdbId,
+                                      tvdbId: item.tvdbId || tvDetails?.tvdbId,
+                                      tmdbId: item.tmdbId,
                                       season: season.seasonNumber,
                                       episode: ep.episodeNumber,
                                       contextSubtitle: `S${String(season.seasonNumber).padStart(2, '0')}E${String(ep.episodeNumber).padStart(2, '0')} • ${ep.title}`
@@ -444,7 +469,10 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({ item, onClose,
                 year: item.year,
                 mediaType: item.mediaType,
                 foreignId: item.id,
-                posterUrl: item.posterUrl
+                posterUrl: item.posterUrl,
+                imdbId: item.imdbId || tvDetails?.imdbId,
+                tvdbId: item.tvdbId || tvDetails?.tvdbId,
+                tmdbId: item.tmdbId
               })}
               className="flex-1 sm:flex-initial justify-center px-4 sm:px-5 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-md shadow-indigo-950/40 border border-indigo-400/40 transition-all cursor-pointer pixel-pill active:scale-[0.98]"
               title="Load all possible downloads and pick which one to get"

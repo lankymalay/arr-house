@@ -77,6 +77,10 @@ export interface MediaItem {
   artist?: string;
   author?: string;
   genres?: string[];
+  imdbId?: string;
+  tvdbId?: number | string;
+  tmdbId?: number | string;
+  musicBrainzId?: string;
   rating?: number;
   ratingSource?: string;
   ratingVotes?: number;
@@ -207,6 +211,10 @@ export interface SearchResultItem {
   overview?: string;
   posterUrl?: string;
   genres?: string[];
+  imdbId?: string;
+  tvdbId?: number | string;
+  tmdbId?: number | string;
+  musicBrainzId?: string;
   alreadyInLibrary?: boolean;
   existingId?: string | number;
   authorOrArtist?: string;
@@ -272,12 +280,17 @@ export interface TvShowDetails {
   totalSeasons: number;
   totalEpisodes: number;
   seasons: TvSeasonItem[];
+  imdbId?: string;
+  tvdbId?: number | string;
 }
 
 export interface AddContentPayload {
   service: ServiceId;
   title: string;
   foreignId: string | number;
+  imdbId?: string;
+  tvdbId?: number | string;
+  tmdbId?: number | string;
   rootFolderPath: string;
   qualityProfileId: number;
   monitored: boolean;
@@ -351,5 +364,12 @@ export interface InteractiveRelease {
   downloadUrl?: string;
   infoUrl?: string;
   publishDate?: string;
+  imdbId?: string;
+  tvdbId?: number | string;
+  tmdbId?: number | string;
+  musicBrainzId?: string;
+  verificationStatus?: 'verified' | 'mismatch' | 'unverified';
+  verificationSource?: string;
+  mismatchReason?: string;
 }
 

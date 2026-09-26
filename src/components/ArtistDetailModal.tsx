@@ -122,7 +122,8 @@ export const ArtistDetailModal: React.FC<ArtistDetailModalProps> = ({
           mediaType: 'music',
           posterUrl: coverUrl || item.posterUrl,
           mode: 'fast',
-          foreignId: albumId || artistId
+          foreignId: albumId || artistId,
+          musicBrainzId: (item as any).foreignArtistId || item.musicBrainzId
         })
       });
 

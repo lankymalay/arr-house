@@ -12,7 +12,11 @@ import {
   ArrowUpDown,
   Filter,
   Layers,
-  HardDrive
+  HardDrive,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import type { InteractiveRelease, ServiceId, MediaType } from '../types.js';
 import { getContentTypeLabel } from '../types.js';
@@ -25,6 +29,10 @@ export interface InteractiveGrabTarget {
   mediaType: MediaType;
   posterUrl?: string;
   foreignId?: string | number;
+  imdbId?: string;
+  tvdbId?: number | string;
+  tmdbId?: number | string;
+  musicBrainzId?: string;
   season?: number;
   episode?: number;
   albumTitle?: string;
@@ -45,6 +53,13 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
 }) => {
   const { success, error } = useToast();
   const [releases, setReleases] = useState<InteractiveRelease[]>([]);
+  const [targetIds, setTargetIds] = useState<{
+    imdbId?: string;
+    tvdbId?: string;
+    tmdbId?: string;
+    source?: string;
+    canonicalTitle?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [grabbingId, setGrabbingId] = useState<string | null>(null);
@@ -54,6 +69,7 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
   const [selectedQuality, setSelectedQuality] = useState<string>('all');
   const [selectedProtocol, setSelectedProtocol] = useState<'all' | 'torrent' | 'usenet'>('all');
   const [onlyProfileMatches, setOnlyProfileMatches] = useState(false);
+  const [onlyVerified, setOnlyVerified] = useState(false);
   const [sortBy, setSortBy] = useState<'score' | 'size' | 'seeders' | 'age'>('score');
 
   useEffect(() => {
@@ -80,6 +96,10 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
 
       if (target.year) params.set('year', String(target.year));
       if (target.foreignId) params.set('foreignId', String(target.foreignId));
+      if (target.imdbId) params.set('imdbId', target.imdbId);
+      if (target.tvdbId) params.set('tvdbId', String(target.tvdbId));
+      if (target.tmdbId) params.set('tmdbId', String(target.tmdbId));
+      if (target.musicBrainzId) params.set('musicBrainzId', target.musicBrainzId);
       if (target.season) params.set('season', String(target.season));
       if (target.episode) params.set('episode', String(target.episode));
       if (target.albumTitle) params.set('albumTitle', target.albumTitle);
@@ -92,6 +112,9 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
       if (res.ok) {
         const data = await res.json();
         setReleases(data.releases || []);
+        if (data.targetIds) {
+          setTargetIds(data.targetIds);
+        }
       } else {
         error('Release Search Failed', 'Could not query indexers for releases.');
       }
@@ -105,6 +128,15 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
 
   const handleGrabSpecific = async (rel: InteractiveRelease) => {
     if (!target) return;
+
+    if (rel.verificationStatus === 'mismatch') {
+      error(
+        'Grab Blocked by Reputable Source Check',
+        rel.mismatchReason || 'This release has a conflicting IMDb/TVDB ID belonging to a different title. Grabbing is prevented.'
+      );
+      return;
+    }
+
     setGrabbingId(rel.id);
 
     try {
@@ -125,7 +157,11 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
           posterUrl: target.posterUrl,
           mode: 'interactive',
           release: rel,
-          foreignId: target.foreignId
+          foreignId: target.foreignId,
+          imdbId: target.imdbId || targetIds?.imdbId,
+          tvdbId: target.tvdbId || targetIds?.tvdbId,
+          tmdbId: target.tmdbId || targetIds?.tmdbId,
+          musicBrainzId: target.musicBrainzId
         })
       });
 
@@ -138,7 +174,7 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
           onClose();
         }, 1200);
       } else {
-        error('Grab Failed', data.error || 'Could not queue this release.');
+        error('Grab Failed', data.message || data.error || 'Could not queue this release.');
       }
     } catch (err: any) {
       error('Network Error', err.message || 'Failed to dispatch grab request.');
@@ -171,16 +207,21 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
         if (selectedQuality !== 'all' && r.quality !== selectedQuality) return false;
         if (selectedProtocol !== 'all' && r.protocol !== selectedProtocol) return false;
         if (onlyProfileMatches && !r.isProfileMatch) return false;
+        if (onlyVerified && r.verificationStatus !== 'verified') return false;
         return true;
       })
       .sort((a, b) => {
+        // Always place verified releases ahead of unverified ones when scores are close
+        if (a.verificationStatus === 'verified' && b.verificationStatus === 'mismatch') return -1;
+        if (a.verificationStatus === 'mismatch' && b.verificationStatus === 'verified') return 1;
+
         if (sortBy === 'score') return (b.qualityScore || 0) - (a.qualityScore || 0);
         if (sortBy === 'size') return b.sizeBytes - a.sizeBytes;
         if (sortBy === 'seeders') return (b.seeders || 0) - (a.seeders || 0);
         if (sortBy === 'age') return (a.ageDays || 0) - (b.ageDays || 0);
         return 0;
       });
-  }, [releases, selectedQuality, selectedProtocol, onlyProfileMatches, sortBy]);
+  }, [releases, selectedQuality, selectedProtocol, onlyProfileMatches, onlyVerified, sortBy]);
 
   if (!target) return null;
 
@@ -188,6 +229,16 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
     target.service === 'sonarr' ? 'bg-[#a8c7fa] text-[#041e49]' :
     target.service === 'radarr' ? 'bg-[#e0d0b8] text-[#3e2723]' :
     'bg-[#b4e3be] text-[#072711]';
+
+  const authoritativeDisplayId = targetIds?.imdbId 
+    ? `IMDb: ${targetIds.imdbId}` 
+    : targetIds?.tvdbId 
+      ? `TheTVDB: ${targetIds.tvdbId}` 
+      : target.imdbId 
+        ? `IMDb: ${target.imdbId}` 
+        : target.tvdbId 
+          ? `TheTVDB: ${target.tvdbId}` 
+          : null;
 
   return (
     <motion.div 
@@ -209,7 +260,7 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
         
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-[#11141c]">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${serviceBadgeClass}`}>
                 {getContentTypeLabel(target.service, target.mediaType)}
@@ -219,6 +270,12 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
               </span>
               {target.year && (
                 <span className="text-xs text-slate-400 font-mono">{target.year}</span>
+              )}
+              {authoritativeDisplayId && (
+                <span className="text-[11px] font-mono font-medium text-emerald-400 bg-emerald-950/70 border border-emerald-700/50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Verifying: {authoritativeDisplayId}</span>
+                </span>
               )}
             </div>
             <h3 className="text-base sm:text-lg font-bold text-white truncate tracking-tight flex items-center gap-2">
@@ -238,6 +295,27 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
           >
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Verification Info Notice */}
+        <div className="bg-[#161c28] px-4 py-2 border-b border-white/[0.06] flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-slate-300">
+            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>
+              <strong>Reputable Source Check Active:</strong> Releases with matching IMDb / TVDB IDs are verified. Conflicting IDs for other media with the same title are rejected.
+            </span>
+          </div>
+          {targetIds?.imdbId && (
+            <a
+              href={`https://www.imdb.com/title/${targetIds.imdbId}/`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-cyan-400 hover:text-cyan-300 font-mono text-[11px] flex items-center gap-1 shrink-0 hover:underline"
+            >
+              <span>IMDb Reference</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
 
         {/* Query & Filter Toolbar */}
@@ -343,7 +421,18 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
                   onChange={(e) => setOnlyProfileMatches(e.target.checked)}
                   className="rounded bg-white/10 border-white/20 text-cyan-400 focus:ring-0 cursor-pointer"
                 />
-                <span>Profile matches only</span>
+                <span>Profile matches</span>
+              </label>
+
+              {/* Verified Source Only Toggle */}
+              <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-emerald-300 ml-1 bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-800/40">
+                <input
+                  type="checkbox"
+                  checked={onlyVerified}
+                  onChange={(e) => setOnlyVerified(e.target.checked)}
+                  className="rounded bg-white/10 border-emerald-500/40 text-emerald-400 focus:ring-0 cursor-pointer"
+                />
+                <span className="font-medium">Verified ID Only</span>
               </label>
             </div>
 
@@ -370,20 +459,22 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
           {loading ? (
             <div className="py-16 text-center space-y-3">
               <RefreshCw className="w-6 h-6 text-cyan-400 animate-spin mx-auto" />
-              <p className="text-xs text-slate-400 font-medium">Scanning indexers for candidate releases...</p>
+              <p className="text-xs text-slate-400 font-medium">Scanning indexers and verifying release candidates against reputable source...</p>
             </div>
           ) : filteredReleases.length === 0 ? (
             <div className="py-16 text-center space-y-2">
               <AlertCircle className="w-8 h-8 text-amber-400/80 mx-auto" />
               <h4 className="text-sm font-bold text-white">No Matching Releases Found</h4>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                No indexed releases matched your current quality and protocol filters. Try relaxing your filters or modifying the search terms above.
+                No indexed releases matched your current filters. If you enabled "Verified ID Only", try untoggling it to review unverified title matches.
               </p>
             </div>
           ) : (
             filteredReleases.map((rel) => {
               const isGrabbing = grabbingId === rel.id;
               const isGrabbed = grabbedId === rel.id;
+              const isMismatch = rel.verificationStatus === 'mismatch';
+              const isVerified = rel.verificationStatus === 'verified';
 
               return (
                 <div
@@ -392,6 +483,10 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
                   className={`p-3.5 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
                     isGrabbed
                       ? 'bg-emerald-950/20 border-emerald-500/40'
+                      : isMismatch
+                      ? 'bg-rose-950/20 border-rose-800/40 opacity-75'
+                      : isVerified
+                      ? 'bg-[#181c25] hover:bg-[#1f2430] border-emerald-800/30 hover:border-emerald-500/50'
                       : rel.isProfileMatch
                       ? 'bg-[#181c25] hover:bg-[#1f2430] border-white/[0.06] hover:border-white/20'
                       : 'bg-[#181c25]/50 border-white/[0.03] opacity-80'
@@ -413,22 +508,44 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
                         {rel.protocol}
                       </span>
 
+                      {/* Reputable Verification Badge */}
+                      {isVerified ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 flex items-center gap-1 font-mono">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{rel.verificationSource || 'Verified Release'}</span>
+                        </span>
+                      ) : isMismatch ? (
+                        <span 
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-600/60 flex items-center gap-1 font-mono"
+                          title={rel.mismatchReason || 'IMDb/TVDB ID indicates this release belongs to another media'}
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                          <span>ID Mismatch (Different Media)</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800/50 text-slate-400 border border-slate-700/40 font-mono">
+                          Unverified ID
+                        </span>
+                      )}
+
                       {/* Indexer Source */}
                       <span className="text-[10px] text-slate-400 font-mono bg-white/[0.05] px-2 py-0.5 rounded-full">
                         {rel.indexer}
                       </span>
 
                       {/* Profile Match / Rejection status */}
-                      {rel.isProfileMatch ? (
-                        <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Meets Profile</span>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1" title={rel.rejectionReasons?.join(', ')}>
-                          <AlertCircle className="w-3 h-3" />
-                          <span>{rel.rejectionReasons?.[0] || 'Quality mismatch'}</span>
-                        </span>
+                      {!isMismatch && (
+                        rel.isProfileMatch ? (
+                          <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Meets Profile</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-400/90 font-medium flex items-center gap-1" title={rel.rejectionReasons?.join(', ')}>
+                            <AlertCircle className="w-3 h-3" />
+                            <span>{rel.rejectionReasons?.[0] || 'Quality mismatch'}</span>
+                          </span>
+                        )
                       )}
                     </div>
 
@@ -436,6 +553,14 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
                     <h5 className="text-xs font-mono font-medium text-white break-all leading-snug hover:text-cyan-300 transition-colors" title={rel.title}>
                       {rel.title}
                     </h5>
+
+                    {/* Mismatch Warning explanation if applicable */}
+                    {isMismatch && rel.mismatchReason && (
+                      <p className="text-[11px] text-rose-300/90 font-sans flex items-center gap-1.5 bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-900/50">
+                        <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                        <span>{rel.mismatchReason}</span>
+                      </p>
+                    )}
 
                     {/* Specs Row: Size, Seeders/Age, Codec, Audio */}
                     <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono flex-wrap">
@@ -469,12 +594,17 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleGrabSpecific(rel)}
-                      disabled={isGrabbing || isGrabbed}
+                      disabled={isGrabbing || isGrabbed || isMismatch}
+                      title={isMismatch ? 'Blocked: Release ID mismatches intended media.' : 'Grab release'}
                       className={`w-full sm:w-auto px-4 py-2 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer pixel-pill ${
                         isGrabbed
                           ? 'bg-emerald-500 text-black shadow'
                           : isGrabbing
                           ? 'bg-white/20 text-white animate-pulse'
+                          : isMismatch
+                          ? 'bg-rose-950/40 text-rose-400 border border-rose-800/40 cursor-not-allowed opacity-60'
+                          : isVerified
+                          ? 'bg-emerald-400 hover:bg-emerald-300 text-black shadow font-bold'
                           : rel.isProfileMatch
                           ? 'bg-white hover:bg-neutral-200 text-black shadow'
                           : 'bg-[#1f2430] hover:bg-white/20 text-slate-200 border border-white/10'
@@ -488,7 +618,17 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
                       ) : isGrabbing ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Grabbing...</span>
+                          <span>Verifying & Grabbing...</span>
+                        </>
+                      ) : isMismatch ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span>ID Mismatch</span>
+                        </>
+                      ) : isVerified ? (
+                        <>
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Grab Verified</span>
                         </>
                       ) : (
                         <>
@@ -506,8 +646,15 @@ export const InteractiveGrabModal: React.FC<InteractiveGrabModalProps> = ({
 
         {/* Footer */}
         <div className="p-3 sm:p-4 bg-[#11141c] border-t border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
-          <div>
-            Showing <span className="font-mono font-bold text-white">{filteredReleases.length}</span> indexed release candidates
+          <div className="flex items-center gap-2">
+            <span>
+              Showing <span className="font-mono font-bold text-white">{filteredReleases.length}</span> release candidates
+            </span>
+            {releases.some(r => r.verificationStatus === 'verified') && (
+              <span className="text-emerald-400 font-mono font-medium text-[11px] bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/40">
+                {releases.filter(r => r.verificationStatus === 'verified').length} verified
+              </span>
+            )}
           </div>
           <button
             type="button"

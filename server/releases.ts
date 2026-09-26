@@ -1,6 +1,7 @@
 import { getDb, saveDb } from './db.js';
 import { getServiceApiUrl, invalidateArrCache } from './arrProxy.js';
 import type { InteractiveRelease, ServiceId, MediaType, QueueItem, DownloadHistoryItem } from '../src/types.js';
+import { resolveReputableIds, verifyAndAnnotateReleases, verifyReleaseAgainstTarget, type ReputableIds } from './verification.js';
 
 export interface ReleaseSearchParams {
   service: ServiceId;
@@ -8,6 +9,10 @@ export interface ReleaseSearchParams {
   year?: number;
   mediaType: MediaType;
   foreignId?: string | number;
+  imdbId?: string;
+  tvdbId?: string | number;
+  tmdbId?: string | number;
+  musicBrainzId?: string;
   season?: number;
   episode?: number;
   albumTitle?: string;
@@ -23,26 +28,35 @@ export interface GrabPayload {
   mode: 'fast' | 'interactive';
   release?: InteractiveRelease;
   foreignId?: string | number;
+  imdbId?: string;
+  tvdbId?: string | number;
+  tmdbId?: string | number;
+  musicBrainzId?: string;
   albumTitle?: string;
   artistName?: string;
   albumId?: string | number;
 }
 
 // Generate realistic scene & P2P release names and specs when offline/mocking
-function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[] {
+function generateMockReleases(params: ReleaseSearchParams, targetIds: ReputableIds): InteractiveRelease[] {
   const cleanTitle = (params.title || 'Media')
     .replace(/[^a-zA-Z0-9\s]/g, '')
     .trim()
     .replace(/\s+/g, '.');
-  const year = params.year || new Date().getFullYear();
+  const year = params.year || targetIds.canonicalYear || new Date().getFullYear();
   const releases: InteractiveRelease[] = [];
+
+  const targetImdb = targetIds.imdbId || 'tt0499549';
+  const targetTvdb = targetIds.tvdbId || '73244';
+  const targetTmdb = targetIds.tmdbId || '19995';
 
   if (params.mediaType === 'movie') {
     releases.push(
+      // Verified 2160p Remux with IMDb ID tag
       {
         id: `rel-mov-1-${Date.now()}`,
         guid: `guid-${cleanTitle}-2160p-remux`,
-        title: `${cleanTitle}.${year}.2160p.UHD.BluRay.x265.TrueHD.Atmos.7.1.DV-FraMeSToR`,
+        title: `${cleanTitle}.${year}.2160p.UHD.BluRay.x265.TrueHD.Atmos.7.1.DV-[${targetImdb}]-FraMeSToR`,
         quality: '2160p UHD Remux',
         qualityScore: 1950,
         sizeBytes: 28.4 * 1024 * 1024 * 1024,
@@ -55,12 +69,15 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
         codec: 'HEVC / x265',
         audio: 'TrueHD Atmos 7.1',
         isProfileMatch: true,
+        imdbId: targetImdb,
+        tmdbId: targetTmdb,
         publishDate: new Date(Date.now() - 12 * 86400000).toISOString()
       },
+      // Verified 2160p WEB-DL with IMDb ID tag
       {
         id: `rel-mov-2-${Date.now()}`,
         guid: `guid-${cleanTitle}-2160p-webdl`,
-        title: `${cleanTitle}.${year}.2160p.MAX.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-FLUX`,
+        title: `${cleanTitle}.${year}.2160p.MAX.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-[${targetImdb}]-FLUX`,
         quality: '2160p WEB-DL',
         qualityScore: 1620,
         sizeBytes: 16.8 * 1024 * 1024 * 1024,
@@ -73,8 +90,10 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
         codec: 'HEVC / x265',
         audio: 'DDP 5.1 Atmos',
         isProfileMatch: true,
+        imdbId: targetImdb,
         publishDate: new Date(Date.now() - 18 * 86400000).toISOString()
       },
+      // Verified 1080p Remux with IMDb infoUrl
       {
         id: `rel-mov-3-${Date.now()}`,
         guid: `guid-${cleanTitle}-1080p-remux`,
@@ -89,8 +108,34 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
         codec: 'AVC / x264',
         audio: 'DTS-HD MA 7.1',
         isProfileMatch: true,
+        imdbId: targetImdb,
+        infoUrl: `https://www.imdb.com/title/${targetImdb}/`,
         publishDate: new Date(Date.now() - 24 * 86400000).toISOString()
       },
+      // SIMULATED TITLE & YEAR COLLISION RELEASE:
+      // Same title and year, but has a DIFFERENT IMDb ID (e.g. remake/short/different movie)
+      {
+        id: `rel-mov-collision-${Date.now()}`,
+        guid: `guid-${cleanTitle}-mismatch-collision`,
+        title: `${cleanTitle}.${year}.1080p.WEB-DL.DDP5.1.H.264-[tt1433043]-AlternativeRelease`,
+        quality: '1080p WEB-DL (Different Title)',
+        qualityScore: 1300,
+        sizeBytes: 4.8 * 1024 * 1024 * 1024,
+        indexer: 'TorrentLeech',
+        indexerId: 101,
+        protocol: 'torrent',
+        seeders: 110,
+        leechers: 6,
+        ageDays: 15,
+        codec: 'H.264',
+        audio: 'DDP 5.1',
+        isProfileMatch: false,
+        imdbId: 'tt1433043', // Distinct mismatched IMDb ID!
+        infoUrl: 'https://www.imdb.com/title/tt1433043/',
+        rejectionReasons: [`IMDb ID mismatch (Release is tt1433043, expected ${targetImdb})`],
+        publishDate: new Date(Date.now() - 15 * 86400000).toISOString()
+      },
+      // Standard 1080p WEB-DL (unverified title/year match)
       {
         id: `rel-mov-4-${Date.now()}`,
         guid: `guid-${cleanTitle}-1080p-webdl`,
@@ -154,10 +199,11 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
     const scopeStr = epStr ? `${seasonStr}${epStr}` : `${seasonStr}.Complete`;
 
     releases.push(
+      // Verified 2160p with TVDB ID tag
       {
         id: `rel-tv-1-${Date.now()}`,
         guid: `guid-${cleanTitle}-${scopeStr}-2160p-flux`,
-        title: `${cleanTitle}.${scopeStr}.2160p.MAX.WEB-DL.DDP5.1.Atmos.DV.H.265-FLUX`,
+        title: `${cleanTitle}.${scopeStr}.2160p.MAX.WEB-DL.DDP5.1.Atmos.DV.H.265-[tvdb=${targetTvdb}]-FLUX`,
         quality: '2160p WEB-DL',
         qualityScore: 1850,
         sizeBytes: epStr ? 3.8 * 1024 * 1024 * 1024 : 32.5 * 1024 * 1024 * 1024,
@@ -170,12 +216,15 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
         codec: 'HEVC / x265',
         audio: 'DDP 5.1 Atmos',
         isProfileMatch: true,
+        tvdbId: targetTvdb,
+        imdbId: targetImdb,
         publishDate: new Date(Date.now() - 8 * 86400000).toISOString()
       },
+      // Verified 1080p NTb release with TVDB ID
       {
         id: `rel-tv-2-${Date.now()}`,
         guid: `guid-${cleanTitle}-${scopeStr}-1080p-ntb`,
-        title: `${cleanTitle}.${scopeStr}.1080p.WEB-DL.DDP5.1.Atmos.H.264-NTb`,
+        title: `${cleanTitle}.${scopeStr}.1080p.WEB-DL.DDP5.1.Atmos.H.264-[tvdb=${targetTvdb}]-NTb`,
         quality: '1080p WEB-DL',
         qualityScore: 1400,
         sizeBytes: epStr ? 1.6 * 1024 * 1024 * 1024 : 14.2 * 1024 * 1024 * 1024,
@@ -188,8 +237,31 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
         codec: 'H.264 / x264',
         audio: 'DDP 5.1 Atmos',
         isProfileMatch: true,
+        tvdbId: targetTvdb,
         publishDate: new Date(Date.now() - 14 * 86400000).toISOString()
       },
+      // SIMULATED TITLE & YEAR COLLISION RELEASE FOR TV (e.g. UK vs US version or remake)
+      {
+        id: `rel-tv-collision-${Date.now()}`,
+        guid: `guid-${cleanTitle}-${scopeStr}-collision-mismatch`,
+        title: `${cleanTitle}.${scopeStr}.1080p.WEB-DL.H.264-[tvdb=999888]-AlternativeSeries`,
+        quality: '1080p WEB-DL (Alternative Series)',
+        qualityScore: 1380,
+        sizeBytes: epStr ? 1.5 * 1024 * 1024 * 1024 : 13.5 * 1024 * 1024 * 1024,
+        indexer: 'EZTV',
+        indexerId: 105,
+        protocol: 'torrent',
+        seeders: 85,
+        leechers: 4,
+        ageDays: 10,
+        codec: 'H.264',
+        audio: 'DDP 5.1',
+        isProfileMatch: false,
+        tvdbId: '999888', // Distinct mismatched TVDB ID!
+        rejectionReasons: [`TheTVDB ID mismatch (Release is 999888, expected ${targetTvdb})`],
+        publishDate: new Date(Date.now() - 10 * 86400000).toISOString()
+      },
+      // Verified Usenet release
       {
         id: `rel-tv-3-${Date.now()}`,
         guid: `guid-${cleanTitle}-${scopeStr}-1080p-usenet`,
@@ -204,6 +276,7 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
         codec: 'H.264',
         audio: 'DDP 5.1',
         isProfileMatch: true,
+        tvdbId: targetTvdb,
         publishDate: new Date(Date.now() - 16 * 86400000).toISOString()
       },
       {
@@ -232,9 +305,9 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
     const cleanAlbum = albumName.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
     const artist = params.artistName || (params.title !== params.albumTitle ? params.title : 'Artist');
     const isEp = cleanAlbum.toLowerCase().includes('ep') || (params.albumTitle?.toLowerCase().includes('ep') ?? false);
+    const mbid = targetIds.musicBrainzId || `mbid-${cleanAlbum.toLowerCase().slice(0, 8)}`;
 
     if (isEp) {
-      // Specialized EP releases (appropriate track counts, bitrates, file sizes)
       const epDisplay = cleanAlbum.toLowerCase().includes('ep') ? cleanAlbum : `${cleanAlbum} EP`;
       releases.push(
         {
@@ -253,6 +326,7 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
           codec: 'FLAC 24/48',
           audio: '24-bit / 48kHz Hi-Res',
           isProfileMatch: true,
+          musicBrainzId: mbid,
           publishDate: new Date(Date.now() - 14 * 86400000).toISOString()
         },
         {
@@ -271,6 +345,7 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
           codec: 'FLAC 16/44.1',
           audio: '16-bit CD Audio',
           isProfileMatch: true,
+          musicBrainzId: mbid,
           publishDate: new Date(Date.now() - 28 * 86400000).toISOString()
         },
         {
@@ -307,29 +382,9 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
           isProfileMatch: false,
           rejectionReasons: ['Lossy MP3 rejected by Lossless FLAC preferred profile'],
           publishDate: new Date(Date.now() - 52 * 86400000).toISOString()
-        },
-        {
-          id: `rel-mus-ep-5-${Date.now()}`,
-          guid: `guid-${artist}-${cleanAlbum}-v0-mp3`,
-          title: `${artist} - ${epDisplay} (${year}) [V0 VBR MP3] [Scene-XTC]`,
-          quality: 'MP3 V0 VBR',
-          qualityScore: 780,
-          sizeBytes: 26 * 1024 * 1024,
-          indexer: 'TorrentLeech',
-          indexerId: 101,
-          protocol: 'torrent',
-          seeders: 48,
-          leechers: 1,
-          ageDays: 80,
-          codec: 'MP3 VBR',
-          audio: 'VBR ~245kbps',
-          isProfileMatch: false,
-          rejectionReasons: ['Lossy MP3 rejected by Lossless FLAC preferred profile'],
-          publishDate: new Date(Date.now() - 80 * 86400000).toISOString()
         }
       );
     } else {
-      // Full Studio Album releases
       releases.push(
         {
           id: `rel-mus-1-${Date.now()}`,
@@ -347,6 +402,7 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
           codec: 'FLAC 24/96',
           audio: 'Lossless Studio Master',
           isProfileMatch: true,
+          musicBrainzId: mbid,
           publishDate: new Date(Date.now() - 45 * 86400000).toISOString()
         },
         {
@@ -365,6 +421,7 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
           codec: 'FLAC 16/44.1',
           audio: 'Lossless CD Audio',
           isProfileMatch: true,
+          musicBrainzId: mbid,
           publishDate: new Date(Date.now() - 70 * 86400000).toISOString()
         },
         {
@@ -393,12 +450,20 @@ function generateMockReleases(params: ReleaseSearchParams): InteractiveRelease[]
   return releases;
 }
 
-// Search releases for a specific movie, TV show, or music album
-export async function searchReleases(params: ReleaseSearchParams): Promise<InteractiveRelease[]> {
+// Search releases for a specific movie, TV show, or music album, verified against reputable source
+export async function searchReleases(params: ReleaseSearchParams): Promise<{
+  releases: InteractiveRelease[];
+  targetIds: ReputableIds;
+}> {
   const db = getDb();
   const svc = db.settings.services[params.service];
 
-  // Try live Arr query if service is active
+  // 1. Resolve reputable IDs for target media
+  const targetIds = await resolveReputableIds(params);
+
+  let rawReleases: InteractiveRelease[] = [];
+
+  // 2. Try live Arr query if service is active
   if (svc && svc.enabled && svc.baseUrl && svc.apiKey && !svc.baseUrl.includes('[YOUR_URL]')) {
     try {
       let endpoint = '';
@@ -417,23 +482,19 @@ export async function searchReleases(params: ReleaseSearchParams): Promise<Inter
       }
 
       const url = getServiceApiUrl(svc, endpoint);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-
       const res = await fetch(url, {
         headers: {
           'X-Api-Key': svc.apiKey,
           Accept: 'application/json'
         },
-        signal: controller.signal
+        signal: AbortSignal.timeout(8000)
       });
-      clearTimeout(timeout);
 
       if (res.ok) {
         const data: any = await res.json();
         const records = Array.isArray(data) ? data : Array.isArray(data.records) ? data.records : [];
         if (records.length > 0) {
-          return records.map((r: any, idx: number) => ({
+          rawReleases = records.map((r: any, idx: number) => ({
             id: `live-${r.guid || idx}-${Date.now()}`,
             guid: r.guid || `live-guid-${idx}`,
             title: r.title || 'Untitled Release',
@@ -452,6 +513,9 @@ export async function searchReleases(params: ReleaseSearchParams): Promise<Inter
             rejectionReasons: r.rejections || [],
             downloadUrl: r.downloadUrl,
             infoUrl: r.infoUrl,
+            imdbId: r.imdbId || r.movie?.imdbId,
+            tvdbId: r.tvdbId || r.series?.tvdbId,
+            tmdbId: r.tmdbId || r.movie?.tmdbId,
             publishDate: r.publishDate
           }));
         }
@@ -461,33 +525,100 @@ export async function searchReleases(params: ReleaseSearchParams): Promise<Inter
     }
   }
 
-  // Fallback to high-fidelity mock scene releases
-  return generateMockReleases(params);
+  // 3. Fallback to mock scene releases if live produced nothing
+  if (rawReleases.length === 0) {
+    rawReleases = generateMockReleases(params, targetIds);
+  }
+
+  // 4. Reputable Source Verification & Annotation
+  const annotatedReleases = verifyAndAnnotateReleases(rawReleases, targetIds);
+
+  return {
+    releases: annotatedReleases,
+    targetIds
+  };
 }
 
-// Execute Grab (either fast automatic or specific interactive release)
+// Execute Grab with reputable source verification
 export async function executeGrab(payload: GrabPayload): Promise<{
   success: boolean;
   message: string;
   releaseTitle?: string;
   queueItem?: QueueItem;
+  verification?: {
+    status: 'verified' | 'mismatch' | 'unverified';
+    source?: string;
+    expectedId?: string;
+  };
 }> {
   const db = getDb();
   const svc = db.settings.services[payload.service];
 
-  const releaseTitleToUse = payload.albumTitle
-    ? `${payload.artistName ? `${payload.artistName} - ` : ''}${payload.albumTitle}`
-    : payload.title;
-
-  const chosenRelease = payload.release || generateMockReleases({
+  // 1. Resolve target authoritative reputable IDs
+  const targetIds = await resolveReputableIds({
     service: payload.service,
-    title: releaseTitleToUse,
-    albumTitle: payload.albumTitle,
-    artistName: payload.artistName,
+    title: payload.title,
     year: payload.year,
-    mediaType: payload.mediaType
-  })[0];
+    mediaType: payload.mediaType,
+    foreignId: payload.foreignId,
+    imdbId: payload.imdbId,
+    tvdbId: payload.tvdbId,
+    tmdbId: payload.tmdbId,
+    musicBrainzId: payload.musicBrainzId,
+    albumTitle: payload.albumTitle,
+    artistName: payload.artistName
+  });
 
+  // 2. Select and Verify Release
+  let chosenRelease: InteractiveRelease | null = null;
+
+  if (payload.mode === 'interactive' && payload.release) {
+    // Check if the user-selected release has an ID mismatch against reputable source
+    const check = verifyReleaseAgainstTarget(payload.release, targetIds);
+    if (check.status === 'mismatch') {
+      return {
+        success: false,
+        message: `Grab aborted: Reputable source verification failed! ${check.reason || 'Release ID does not match target media identity.'}`,
+        verification: {
+          status: 'mismatch',
+          source: check.source,
+          expectedId: check.expectedId
+        }
+      };
+    }
+    chosenRelease = payload.release;
+  } else {
+    // Fast automatic grab: Search and filter candidates against reputable source
+    const { releases: candidates } = await searchReleases({
+      service: payload.service,
+      title: payload.title,
+      year: payload.year,
+      mediaType: payload.mediaType,
+      foreignId: payload.foreignId,
+      imdbId: payload.imdbId,
+      tvdbId: payload.tvdbId,
+      tmdbId: payload.tmdbId,
+      musicBrainzId: payload.musicBrainzId,
+      albumTitle: payload.albumTitle,
+      artistName: payload.artistName
+    });
+
+    // Eliminate any releases with a verified ID mismatch!
+    const validCandidates = candidates.filter(r => r.verificationStatus !== 'mismatch' && r.isProfileMatch);
+
+    if (validCandidates.length === 0) {
+      return {
+        success: false,
+        message: `Automatic grab blocked: No candidate releases passed reputable source verification (potential wrong release collision avoided).`
+      };
+    }
+
+    // Prioritize verified releases (IMDb ID or TVDB ID match) over unverified ones
+    const verifiedCandidates = validCandidates.filter(r => r.verificationStatus === 'verified');
+    chosenRelease = (verifiedCandidates.length > 0 ? verifiedCandidates : validCandidates)[0];
+  }
+
+  const verificationCheck = verifyReleaseAgainstTarget(chosenRelease, targetIds);
   const totalSize = chosenRelease.sizeBytes || 4 * 1024 * 1024 * 1024;
   const queueId = `q-${Date.now()}`;
   const outputPath = payload.service === 'lidarr' && payload.albumTitle
@@ -514,11 +645,10 @@ export async function executeGrab(payload: GrabPayload): Promise<{
   let realServiceSuccess = false;
   let realServiceMessage = '';
 
-  // Try real service call if configured
+  // 3. Try real service call if configured
   if (svc && svc.enabled && svc.baseUrl && svc.apiKey && !svc.baseUrl.includes('[YOUR_URL]')) {
     try {
       if (payload.mode === 'interactive' && payload.release) {
-        // Grab specific release in Arr
         const endpoint = payload.service === 'lidarr' ? '/api/v1/release' : '/api/v3/release';
         const url = getServiceApiUrl(svc, endpoint);
         const res = await fetch(url, {
@@ -569,7 +699,7 @@ export async function executeGrab(payload: GrabPayload): Promise<{
 
         if (res.ok) {
           realServiceSuccess = true;
-          realServiceMessage = `Automatic grab search dispatched to ${svc.name} for "${payload.title}"`;
+          realServiceMessage = `Verified grab search dispatched to ${svc.name} for "${payload.title}"`;
         }
       }
     } catch (e: any) {
@@ -577,7 +707,7 @@ export async function executeGrab(payload: GrabPayload): Promise<{
     }
   }
 
-  // Record into download history if real command was sent or recorded
+  // 4. Record into download history
   const historyItem: DownloadHistoryItem = {
     id: `hist-${Date.now()}`,
     service: payload.service,
@@ -598,7 +728,7 @@ export async function executeGrab(payload: GrabPayload): Promise<{
   db.downloadHistory.unshift(historyItem);
   if (db.downloadHistory.length > 50) db.downloadHistory.pop();
 
-  // Ensure item is tracked in library with status 'downloading'
+  // 5. Ensure item is tracked in library with status 'downloading'
   db.addedLibraryItems = db.addedLibraryItems || [];
   const existingLib = db.addedLibraryItems.find((i: any) => 
     i.title.toLowerCase() === payload.title.toLowerCase() && i.service === payload.service
@@ -608,6 +738,8 @@ export async function executeGrab(payload: GrabPayload): Promise<{
     if (payload.posterUrl && !existingLib.posterUrl) {
       existingLib.posterUrl = payload.posterUrl;
     }
+    if (targetIds.imdbId && !existingLib.imdbId) existingLib.imdbId = targetIds.imdbId;
+    if (targetIds.tvdbId && !existingLib.tvdbId) existingLib.tvdbId = targetIds.tvdbId;
   } else {
     db.addedLibraryItems.unshift({
       id: `add-${Date.now()}`,
@@ -623,21 +755,33 @@ export async function executeGrab(payload: GrabPayload): Promise<{
       path: outputPath,
       added: new Date().toISOString(),
       sizeBytes: totalSize,
-      genres: []
+      genres: [],
+      imdbId: targetIds.imdbId,
+      tvdbId: targetIds.tvdbId,
+      tmdbId: targetIds.tmdbId
     });
   }
 
   saveDb(db);
   invalidateArrCache();
 
+  const verificationNote = verificationCheck.status === 'verified'
+    ? ` [Verified via ${verificationCheck.source}]`
+    : '';
+
   return {
     success: true,
     message: realServiceSuccess
-      ? realServiceMessage
+      ? `${realServiceMessage}${verificationNote}`
       : payload.mode === 'interactive'
-        ? `Grabbed release: ${chosenRelease.quality} (${chosenRelease.indexer})`
-        : `Fast Grab: Dispatched download for top-matched ${chosenRelease.quality} release`,
+        ? `Grabbed release: ${chosenRelease.quality} (${chosenRelease.indexer})${verificationNote}`
+        : `Verified Grab: Dispatched top ${chosenRelease.quality} release${verificationNote}`,
     releaseTitle: chosenRelease.title,
-    queueItem: createdQueueItem
+    queueItem: createdQueueItem,
+    verification: {
+      status: verificationCheck.status,
+      source: verificationCheck.source,
+      expectedId: targetIds.imdbId || targetIds.tvdbId
+    }
   };
 }

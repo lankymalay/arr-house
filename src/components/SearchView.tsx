@@ -11,7 +11,8 @@ import {
   SlidersHorizontal, 
   X,
   Flame,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  ShieldCheck
 } from 'lucide-react';
 import type { SearchResultItem, ServiceId, MediaItem } from '../types.js';
 import { getContentTypeLabel } from '../types.js';
@@ -210,6 +211,18 @@ export const SearchView: React.FC<SearchViewProps> = ({
               </span>
               {result.year && (
                 <span className="text-xs text-[#9aa0a6] font-mono">{result.year}</span>
+              )}
+              {result.imdbId && (
+                <span className="text-[10px] text-amber-300 font-mono bg-amber-950/60 border border-amber-700/40 px-2 py-0.5 rounded-full flex items-center gap-1" title="Reputable IMDb ID verified">
+                  <ShieldCheck className="w-3 h-3 text-amber-400" />
+                  <span>IMDb: {result.imdbId}</span>
+                </span>
+              )}
+              {result.tvdbId && (
+                <span className="text-[10px] text-emerald-300 font-mono bg-emerald-950/60 border border-emerald-700/40 px-2 py-0.5 rounded-full flex items-center gap-1" title="Reputable TheTVDB ID verified">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  <span>TVDB: {result.tvdbId}</span>
+                </span>
               )}
               {isTvShow && (
                 <span className="text-[10px] text-[#a8c7fa] bg-[#a8c7fa]/10 px-2 py-0.5 rounded-full border border-[#a8c7fa]/20 font-medium">

@@ -700,7 +700,7 @@ async function startServer() {
     }
   });
 
-  // Interactive Release Search
+  // Interactive Release Search with Reputable Source Verification
   app.get('/api/arr/releases', requireAuth, async (req, res) => {
     try {
       const service = (req.query.service as ServiceId) || 'radarr';
@@ -712,31 +712,39 @@ async function startServer() {
       const episode = req.query.episode ? parseInt(req.query.episode as string, 10) : undefined;
       const albumTitle = req.query.albumTitle as string;
       const artistName = req.query.artistName as string;
+      const imdbId = req.query.imdbId as string | undefined;
+      const tvdbId = req.query.tvdbId as string | undefined;
+      const tmdbId = req.query.tmdbId as string | undefined;
+      const musicBrainzId = req.query.musicBrainzId as string | undefined;
 
       if (!title && !albumTitle) {
         return res.status(400).json({ error: 'Title is required for release search' });
       }
 
-      const releases = await searchReleases({
+      const { releases, targetIds } = await searchReleases({
         service,
         title,
         year,
         mediaType,
         foreignId,
+        imdbId,
+        tvdbId,
+        tmdbId,
+        musicBrainzId,
         season,
         episode,
         albumTitle,
         artistName
       });
 
-      res.json({ releases });
+      res.json({ releases, targetIds });
     } catch (err: any) {
       console.error('[Releases] Search error:', err);
       res.status(500).json({ error: err.message || 'Failed to search releases' });
     }
   });
 
-  // Dispatch Grab (Automatic Fast Grab or Specific Interactive Release)
+  // Dispatch Grab (Automatic Fast Grab or Specific Interactive Release) with Reputable Source Verification
   app.post('/api/arr/grab', requireAuth, async (req, res) => {
     const user = (req as any).user;
     if (user.role === 'readonly') {
@@ -744,7 +752,7 @@ async function startServer() {
     }
 
     try {
-      const { service, title, year, mediaType, posterUrl, mode, release, foreignId, albumTitle, artistName, albumId } = req.body;
+      const { service, title, year, mediaType, posterUrl, mode, release, foreignId, albumTitle, artistName, albumId, imdbId, tvdbId, tmdbId, musicBrainzId } = req.body;
       if (!service || !title) {
         return res.status(400).json({ error: 'Service and title are required for grab.' });
       }
@@ -758,10 +766,18 @@ async function startServer() {
         mode: mode || 'fast',
         release,
         foreignId,
+        imdbId,
+        tvdbId,
+        tmdbId,
+        musicBrainzId,
         albumTitle,
         artistName,
         albumId
       });
+
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
 
       res.json(result);
     } catch (err: any) {

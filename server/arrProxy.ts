@@ -363,6 +363,8 @@ async function fetchSonarrSeries(service: ServiceConfig): Promise<MediaItem[]> {
         episodeFileCount: epFileCount,
         seasonCount: item.statistics?.seasonCount || item.seasons?.length || 0,
         genres: item.genres || [],
+        imdbId: item.imdbId ? (String(item.imdbId).startsWith('tt') ? item.imdbId : `tt${item.imdbId}`) : undefined,
+        tvdbId: item.tvdbId || undefined,
         rating: item.ratings?.value 
           ? (item.ratings.value > 10 ? Math.round((item.ratings.value / 10) * 10) / 10 : Math.round(item.ratings.value * 10) / 10)
           : 8.5,
@@ -446,6 +448,8 @@ async function fetchRadarrMovies(service: ServiceConfig): Promise<MediaItem[]> {
         rootFolder: item.rootFolderPath || item.path,
         sizeBytes: item.sizeOnDisk || 0,
         genres: item.genres || [],
+        imdbId: item.imdbId ? (String(item.imdbId).startsWith('tt') ? item.imdbId : `tt${item.imdbId}`) : undefined,
+        tmdbId: item.tmdbId || undefined,
         rating: movieRating,
         ratingSource: movieRatingSource,
         ratingVotes: movieVotes,
@@ -1436,6 +1440,9 @@ export async function searchContent(query: string, targetService?: ServiceId | '
                 overview: item.overview || '',
                 posterUrl: poster || '',
                 genres: item.genres || [],
+                imdbId: item.imdbId ? (String(item.imdbId).startsWith('tt') ? item.imdbId : `tt${item.imdbId}`) : undefined,
+                tvdbId: item.tvdbId || undefined,
+                tmdbId: item.tmdbId || undefined,
                 alreadyInLibrary: existingTitles.has(title.toLowerCase()),
                 popularity: typeof item.popularity === 'number' ? item.popularity : (item.ratings?.votes ? item.ratings.votes / 50 : undefined),
                 ratings: item.ratings ? { votes: item.ratings.votes, value: item.ratings.value } : undefined,
@@ -1467,6 +1474,8 @@ export async function searchContent(query: string, targetService?: ServiceId | '
                   overview: show.summary ? show.summary.replace(/<[^>]+>/g, '') : '',
                   posterUrl: show.image?.medium || show.image?.original || '',
                   genres: show.genres || [],
+                  imdbId: show.externals?.imdb ? (String(show.externals.imdb).startsWith('tt') ? show.externals.imdb : `tt${show.externals.imdb}`) : undefined,
+                  tvdbId: show.externals?.thetvdb || undefined,
                   alreadyInLibrary: existingTitles.has(show.name.toLowerCase()),
                   popularity: show.weight || undefined,
                   ratings: show.rating?.average ? { value: show.rating.average } : undefined,
@@ -1566,8 +1575,18 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
       const isNumericForeignId = payload.foreignId && !isNaN(Number(payload.foreignId)) && /^\d+$/.test(String(payload.foreignId).trim());
       
       try {
-        // Try lookup by tmdb ID if numeric, otherwise try by title
-        const lookupTerm = isNumericForeignId ? `tmdb:${payload.foreignId}` : payload.title;
+        // Try lookup by reputable source IDs first (imdb / tmdb) to ensure correct release
+        let lookupTerm = '';
+        if (payload.imdbId) {
+          lookupTerm = `imdb:${payload.imdbId}`;
+        } else if (payload.tmdbId) {
+          lookupTerm = `tmdb:${payload.tmdbId}`;
+        } else if (isNumericForeignId) {
+          lookupTerm = `tmdb:${payload.foreignId}`;
+        } else {
+          lookupTerm = payload.title;
+        }
+
         let lookupRes = await fetch(getServiceApiUrl(service, `/api/v3/movie/lookup?term=${encodeURIComponent(lookupTerm)}`), {
           headers: { 'X-Api-Key': service.apiKey, Accept: 'application/json' }
         });
@@ -1577,8 +1596,8 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
           list = await lookupRes.json();
         }
 
-        // If lookup with tmdb ID yielded no results, fall back to title lookup
-        if ((!Array.isArray(list) || list.length === 0) && isNumericForeignId && payload.title) {
+        // If lookup with ID yielded no results, fall back to title lookup
+        if ((!Array.isArray(list) || list.length === 0) && payload.title) {
           lookupRes = await fetch(getServiceApiUrl(service, `/api/v3/movie/lookup?term=${encodeURIComponent(payload.title)}`), {
             headers: { 'X-Api-Key': service.apiKey, Accept: 'application/json' }
           });
@@ -1588,7 +1607,11 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
         }
 
         if (Array.isArray(list) && list.length > 0) {
-          if (isNumericForeignId) {
+          if (payload.imdbId) {
+            movieObj = list.find((m: any) => String(m.imdbId).toLowerCase() === String(payload.imdbId).toLowerCase()) || list[0];
+          } else if (payload.tmdbId) {
+            movieObj = list.find((m: any) => String(m.tmdbId) === String(payload.tmdbId)) || list[0];
+          } else if (isNumericForeignId) {
             movieObj = list.find((m: any) => String(m.tmdbId) === String(payload.foreignId)) || list[0];
           } else {
             // Find by matching year if provided, or best title match
@@ -1670,7 +1693,17 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
       const isNumericForeignId = payload.foreignId && !isNaN(Number(payload.foreignId)) && /^\d+$/.test(String(payload.foreignId).trim());
 
       try {
-        const lookupTerm = isNumericForeignId ? `tvdb:${payload.foreignId}` : payload.title;
+        let lookupTerm = '';
+        if (payload.tvdbId) {
+          lookupTerm = `tvdb:${payload.tvdbId}`;
+        } else if (payload.imdbId) {
+          lookupTerm = `imdb:${payload.imdbId}`;
+        } else if (isNumericForeignId) {
+          lookupTerm = `tvdb:${payload.foreignId}`;
+        } else {
+          lookupTerm = payload.title;
+        }
+
         let lookupRes = await fetch(getServiceApiUrl(service, `/api/v3/series/lookup?term=${encodeURIComponent(lookupTerm)}`), {
           headers: { 'X-Api-Key': service.apiKey, Accept: 'application/json' }
         });
@@ -1680,7 +1713,7 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
           list = await lookupRes.json();
         }
 
-        if ((!Array.isArray(list) || list.length === 0) && isNumericForeignId && payload.title) {
+        if ((!Array.isArray(list) || list.length === 0) && payload.title) {
           lookupRes = await fetch(getServiceApiUrl(service, `/api/v3/series/lookup?term=${encodeURIComponent(payload.title)}`), {
             headers: { 'X-Api-Key': service.apiKey, Accept: 'application/json' }
           });
@@ -1690,7 +1723,11 @@ export async function addContentToService(payload: AddContentPayload): Promise<{
         }
 
         if (Array.isArray(list) && list.length > 0) {
-          if (isNumericForeignId) {
+          if (payload.tvdbId) {
+            seriesObj = list.find((s: any) => String(s.tvdbId) === String(payload.tvdbId)) || list[0];
+          } else if (payload.imdbId) {
+            seriesObj = list.find((s: any) => String(s.imdbId).toLowerCase() === String(payload.imdbId).toLowerCase()) || list[0];
+          } else if (isNumericForeignId) {
             seriesObj = list.find((s: any) => String(s.tvdbId) === String(payload.foreignId)) || list[0];
           } else {
             seriesObj = list[0];

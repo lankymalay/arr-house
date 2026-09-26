@@ -71,7 +71,9 @@ export async function getTvShowDetails(
         genres: data.genres || [],
         totalSeasons: seasons.length,
         totalEpisodes: seasons.reduce((acc, s) => acc + s.episodeCount, 0),
-        seasons
+        seasons,
+        imdbId: data.externals?.imdb ? (String(data.externals.imdb).startsWith('tt') ? data.externals.imdb : `tt${data.externals.imdb}`) : undefined,
+        tvdbId: data.externals?.thetvdb || undefined
       };
 
       detailsCache.set(cacheKey, { timestamp: Date.now(), data: details });
